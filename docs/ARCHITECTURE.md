@@ -61,4 +61,4 @@ flowchart LR
 - `/health` provides liveness and `/health/ready` checks Postgres, Redis, and Qdrant.
 - `/api/metrics` exposes Prometheus-style application metrics.
 - Backup and restore scripts cover PostgreSQL, uploads, Qdrant data, and MinIO data.
-- Security controls include refresh-token revocation, hashed API keys, rate limiting, security headers, upload validation, and per-user retrieval filters.
+- Security controls include refresh-token revocation, hashed scoped API keys, per-key daily usage limits, rate limiting, security headers, upload validation, and per-user retrieval filters.

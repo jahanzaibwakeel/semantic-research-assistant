@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import ALL_API_KEY_SCOPES, get_current_user
 from app.core.config import get_settings
 from app.core.security import create_access_token, create_refresh_token, hash_password, hash_token, verify_password
 from app.db.session import get_db
@@ -110,12 +110,17 @@ def create_api_key(
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="API key name is required")
+    scopes = _normalize_api_key_scopes(payload.scopes)
+    if payload.daily_request_limit is not None and payload.daily_request_limit <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Daily request limit must be greater than zero")
     api_key_value = f"sra_{create_refresh_token()}"
     api_key = ApiKey(
         owner_id=user.id,
         name=name[:255],
         key_hash=hash_token(api_key_value),
         key_prefix=api_key_value[:12],
+        scopes=scopes,
+        daily_request_limit=payload.daily_request_limit,
     )
     db.add(api_key)
     db.commit()
@@ -142,6 +147,18 @@ def _revoke_user_refresh_tokens(db: Session, user: User) -> None:
     for token in tokens:
         token.revoked = True
     db.commit()
+
+
+def _normalize_api_key_scopes(scopes: list[str]) -> str:
+    if not scopes:
+        return "*"
+    cleaned = sorted({scope.strip() for scope in scopes if scope.strip()})
+    if "*" in cleaned:
+        return "*"
+    invalid = [scope for scope in cleaned if scope not in ALL_API_KEY_SCOPES]
+    if invalid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid API key scopes: {', '.join(invalid)}")
+    return ",".join(cleaned)
 
 
 def _issue_tokens(db: Session, user: User) -> Token:

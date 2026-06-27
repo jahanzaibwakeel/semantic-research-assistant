@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class RetrievalOptions(BaseModel):
@@ -56,12 +56,17 @@ class PasswordChangeRequest(BaseModel):
 
 class ApiKeyCreate(BaseModel):
     name: str
+    scopes: list[str] = Field(default_factory=lambda: ["*"])
+    daily_request_limit: int | None = None
 
 
 class ApiKeyRead(BaseModel):
     id: uuid.UUID
     name: str
     key_prefix: str
+    scopes: str
+    daily_request_limit: int | None
+    requests_today: int
     revoked: bool
     last_used_at: datetime | None
     created_at: datetime

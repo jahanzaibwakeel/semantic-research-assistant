@@ -1,8 +1,10 @@
 # API Usage
 
-The dashboard is the easiest way to create an API key. Open the app, sign in, create a key from the API Keys panel, and copy the generated value once.
+The dashboard is the easiest way to create an API key. Open the app, sign in, create a key from the API Keys panel, choose scopes, optionally set a daily request limit, and copy the generated value once.
 
 API keys are sent with the `X-API-Key` header. JWT bearer tokens still work for browser sessions.
+
+Available scopes include `documents:read`, `documents:write`, `search:read`, `qa:read`, `research:read`, `research:write`, `projects:read`, `projects:write`, `exports:read`, `history:read`, `ops:read`, and `profile:read`. Use `*` for full access.
 
 ## Environment
 

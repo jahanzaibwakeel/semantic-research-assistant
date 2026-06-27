@@ -1,14 +1,16 @@
 import unittest
 import uuid
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from fastapi import HTTPException
 
 from app.api.routes.auth import _revoke_user_refresh_tokens, change_password
+from app.api.deps import _enforce_api_key_quota, _required_scope
 from app.core.config import Settings
 from app.core.logging import RateLimitMiddleware
 from app.core.security import hash_password, verify_password
-from app.models.entities import RefreshToken, User
+from app.models.entities import ApiKey, RefreshToken, User
 from app.schemas.dto import PasswordChangeRequest
 
 
@@ -50,6 +52,26 @@ class RateLimitTests(unittest.TestCase):
         self.assertFalse(middleware._memory_limited("127.0.0.1", 1000.0))
         self.assertFalse(middleware._memory_limited("127.0.0.1", 1001.0))
         self.assertTrue(middleware._memory_limited("127.0.0.1", 1002.0))
+
+
+class ApiKeyScopeTests(unittest.TestCase):
+    def test_required_scope_maps_mutating_document_routes_to_write(self):
+        request = SimpleNamespace(url=SimpleNamespace(path="/api/documents/abc"), method="DELETE")
+
+        self.assertEqual(_required_scope(request), "documents:write")
+
+    def test_required_scope_blocks_api_key_management(self):
+        request = SimpleNamespace(url=SimpleNamespace(path="/api/auth/api-keys"), method="GET")
+
+        self.assertIsNone(_required_scope(request))
+
+    def test_daily_quota_rejects_exhausted_key(self):
+        key = ApiKey(daily_request_limit=1, requests_today=1, quota_reset_at=datetime.now(timezone.utc))
+
+        with self.assertRaises(HTTPException) as exc:
+            _enforce_api_key_quota(key)
+
+        self.assertEqual(exc.exception.status_code, 429)
 
 
 class AuthSessionTests(unittest.TestCase):

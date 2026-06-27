@@ -18,7 +18,7 @@ Please do not open public issues for sensitive security reports. Contact the mai
 - JWT access tokens and rotating refresh tokens.
 - Logout and logout-all refresh-token revocation.
 - Password change flow that revokes active refresh sessions.
-- Hashed API keys for programmatic access through the `X-API-Key` header.
+- Hashed API keys with scopes and optional daily request limits for programmatic access through the `X-API-Key` header.
 - Per-IP rate limiting with memory or Redis backend.
 - Security response headers.
 - Upload validation for extension, content type, PDF signature, size, and duplicate content.

@@ -6,6 +6,7 @@ import { api, apiUrl, ApiKeyRecord, changePassword, Citation, createApiKey, Docu
 import { SourceList } from "@/components/SourceList";
 
 type Mode = "ask" | "search" | "compare";
+const API_KEY_SCOPES = ["*", "documents:read", "documents:write", "search:read", "qa:read", "research:read", "research:write", "projects:read", "projects:write", "exports:read", "history:read", "ops:read", "profile:read"];
 
 export default function Page() {
   const [token, setToken] = useState<string | null>(null);
@@ -28,6 +29,8 @@ export default function Page() {
   const [uploadTags, setUploadTags] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [apiKeyName, setApiKeyName] = useState("Research CLI");
+  const [apiKeyScopes, setApiKeyScopes] = useState<string[]>(["*"]);
+  const [apiKeyDailyLimit, setApiKeyDailyLimit] = useState("");
   const [newApiKey, setNewApiKey] = useState("");
   const [noteBody, setNoteBody] = useState("");
   const [selectedDocument, setSelectedDocument] = useState<string>("");
@@ -182,15 +185,33 @@ export default function Page() {
     setError("");
     setAccountMessage("");
     try {
-      const created = await createApiKey(token, apiKeyName.trim());
+      const dailyLimit = apiKeyDailyLimit.trim() ? Number(apiKeyDailyLimit) : null;
+      const created = await createApiKey(token, apiKeyName.trim(), apiKeyScopes, dailyLimit);
       setNewApiKey(created.api_key);
       setApiKeyName("");
+      setApiKeyScopes(["*"]);
+      setApiKeyDailyLimit("");
       await loadWorkspace();
     } catch (err) {
       setError(err instanceof Error ? err.message : "API key creation failed");
     } finally {
       setBusy(false);
     }
+  }
+
+  function toggleApiKeyScope(scope: string) {
+    if (scope === "*") {
+      setApiKeyScopes(["*"]);
+      return;
+    }
+    setApiKeyScopes((current) => {
+      const scoped = current.filter((item) => item !== "*");
+      if (scoped.includes(scope)) {
+        const next = scoped.filter((item) => item !== scope);
+        return next.length ? next : ["*"];
+      }
+      return [...scoped, scope];
+    });
   }
 
   async function removeApiKey(apiKeyId: string) {
@@ -648,9 +669,20 @@ export default function Page() {
 
           <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-soft">
             <div className="font-bold">API Keys</div>
-            <form onSubmit={submitApiKey} className="mt-4 flex gap-2">
-              <input className="focus-ring min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" placeholder="Key name" value={apiKeyName} onChange={(event) => setApiKeyName(event.target.value)} />
-              <button className="focus-ring rounded-lg bg-ink px-3 py-2 text-sm font-bold text-white" disabled={busy || !apiKeyName.trim()}>Create</button>
+            <form onSubmit={submitApiKey} className="mt-4 space-y-3">
+              <div className="flex gap-2">
+                <input className="focus-ring min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" placeholder="Key name" value={apiKeyName} onChange={(event) => setApiKeyName(event.target.value)} />
+                <button className="focus-ring rounded-lg bg-ink px-3 py-2 text-sm font-bold text-white" disabled={busy || !apiKeyName.trim()}>Create</button>
+              </div>
+              <input className="focus-ring w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" type="number" min="1" placeholder="daily request limit" value={apiKeyDailyLimit} onChange={(event) => setApiKeyDailyLimit(event.target.value)} />
+              <div className="flex flex-wrap gap-2">
+                {API_KEY_SCOPES.map((scope) => (
+                  <label key={scope} className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-semibold ${apiKeyScopes.includes(scope) ? "border-teal bg-teal/10 text-teal" : "border-stone-200 text-stone-600"}`}>
+                    <input className="h-3 w-3 accent-teal" type="checkbox" checked={apiKeyScopes.includes(scope)} onChange={() => toggleApiKeyScope(scope)} />
+                    {scope}
+                  </label>
+                ))}
+              </div>
             </form>
             {newApiKey ? (
               <div className="mt-3 rounded-lg border border-teal/30 bg-teal/10 p-3">
@@ -666,6 +698,8 @@ export default function Page() {
                     <div className="min-w-0">
                       <div className="truncate text-sm font-bold">{key.name}</div>
                       <div className="mt-1 text-xs text-stone-500">{key.key_prefix}... / {key.revoked ? "revoked" : "active"}</div>
+                      <div className="mt-1 text-xs text-stone-500">{key.scopes}</div>
+                      <div className="mt-1 text-xs text-stone-500">{key.daily_request_limit ? `${key.requests_today}/${key.daily_request_limit} today` : `${key.requests_today} requests today`}</div>
                     </div>
                     {!key.revoked ? (
                       <button className="focus-ring rounded-lg border border-stone-300 px-2 py-1 text-xs font-bold text-ink" onClick={() => removeApiKey(key.id)} disabled={busy}>Revoke</button>

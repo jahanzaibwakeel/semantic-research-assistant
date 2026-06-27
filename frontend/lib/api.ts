@@ -69,6 +69,9 @@ export type ApiKeyRecord = {
   id: string;
   name: string;
   key_prefix: string;
+  scopes: string;
+  daily_request_limit: number | null;
+  requests_today: number;
   revoked: boolean;
   last_used_at: string | null;
   created_at: string;
@@ -173,10 +176,10 @@ export async function changePassword(token: string, currentPassword: string, new
   });
 }
 
-export async function createApiKey(token: string, name: string) {
+export async function createApiKey(token: string, name: string, scopes: string[] = ["*"], dailyRequestLimit: number | null = null) {
   return api<ApiKeyCreated>("/auth/api-keys", token, {
     method: "POST",
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name, scopes, daily_request_limit: dailyRequestLimit })
   });
 }
 

@@ -26,7 +26,7 @@ Deeper docs:
 - JWT registration/login with protected API routes.
 - Refresh-token rotation for longer-lived sessions.
 - Logout, logout-all, and password change flows with refresh-token revocation.
-- API keys for programmatic ingestion, search, Q&A, exports, and automation.
+- Scoped API keys with optional daily request limits for programmatic ingestion, search, Q&A, exports, and automation.
 - Standard-library Python CLI example for API-key workflows.
 - Memory or Redis-backed per-IP rate limiting for API abuse protection.
 - Security response headers for production browser hardening.
