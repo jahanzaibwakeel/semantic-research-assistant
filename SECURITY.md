@@ -18,6 +18,7 @@ Please do not open public issues for sensitive security reports. Contact the mai
 - JWT access tokens and rotating refresh tokens.
 - Logout and logout-all refresh-token revocation.
 - Password change flow that revokes active refresh sessions.
+- Hashed API keys for programmatic access through the `X-API-Key` header.
 - Per-IP rate limiting with memory or Redis backend.
 - Security response headers.
 - Upload validation for extension, content type, PDF signature, size, and duplicate content.
@@ -30,6 +31,7 @@ Please do not open public issues for sensitive security reports. Contact the mai
 - Use HTTPS in front of the API and frontend.
 - Restrict `CORS_ORIGINS` to trusted domains.
 - Use `RATE_LIMIT_BACKEND=redis` when running more than one backend instance.
+- Revoke API keys that are no longer needed or may have been exposed.
 - Store uploaded documents in durable private object storage.
 - Keep Postgres, Redis, Qdrant, and object storage off the public internet.
 - Review URL ingestion rules before enabling public signups.

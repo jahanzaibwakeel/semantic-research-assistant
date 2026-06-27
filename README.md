@@ -25,6 +25,7 @@ Deeper docs:
 - JWT registration/login with protected API routes.
 - Refresh-token rotation for longer-lived sessions.
 - Logout, logout-all, and password change flows with refresh-token revocation.
+- API keys for programmatic ingestion, search, Q&A, exports, and automation.
 - Memory or Redis-backed per-IP rate limiting for API abuse protection.
 - Security response headers for production browser hardening.
 - Project workspaces for grouping documents and research notes.
@@ -175,6 +176,9 @@ python -m unittest discover tests
 - `POST /api/auth/logout`
 - `POST /api/auth/logout-all`
 - `POST /api/auth/change-password`
+- `GET /api/auth/api-keys`
+- `POST /api/auth/api-keys`
+- `DELETE /api/auth/api-keys/{api_key_id}`
 - `GET /api/auth/me`
 - `GET /api/projects`
 - `POST /api/projects`

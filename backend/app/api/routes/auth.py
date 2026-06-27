@@ -1,5 +1,6 @@
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -10,8 +11,8 @@ from app.api.deps import get_current_user
 from app.core.config import get_settings
 from app.core.security import create_access_token, create_refresh_token, hash_password, hash_token, verify_password
 from app.db.session import get_db
-from app.models.entities import RefreshToken, User
-from app.schemas.dto import LogoutRequest, PasswordChangeRequest, RefreshTokenRequest, Token, UserCreate, UserRead
+from app.models.entities import ApiKey, RefreshToken, User
+from app.schemas.dto import ApiKeyCreate, ApiKeyCreated, ApiKeyRead, LogoutRequest, PasswordChangeRequest, RefreshTokenRequest, Token, UserCreate, UserRead
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -93,6 +94,47 @@ def change_password(
 @router.get("/me", response_model=UserRead)
 def me(user: Annotated[User, Depends(get_current_user)]):
     return user
+
+
+@router.get("/api-keys", response_model=list[ApiKeyRead])
+def list_api_keys(user: Annotated[User, Depends(get_current_user)], db: Annotated[Session, Depends(get_db)]):
+    return db.scalars(select(ApiKey).where(ApiKey.owner_id == user.id).order_by(ApiKey.created_at.desc())).all()
+
+
+@router.post("/api-keys", response_model=ApiKeyCreated, status_code=status.HTTP_201_CREATED)
+def create_api_key(
+    payload: ApiKeyCreate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="API key name is required")
+    api_key_value = f"sra_{create_refresh_token()}"
+    api_key = ApiKey(
+        owner_id=user.id,
+        name=name[:255],
+        key_hash=hash_token(api_key_value),
+        key_prefix=api_key_value[:12],
+    )
+    db.add(api_key)
+    db.commit()
+    db.refresh(api_key)
+    return ApiKeyCreated.model_validate(api_key, from_attributes=True).model_copy(update={"api_key": api_key_value})
+
+
+@router.delete("/api-keys/{api_key_id}", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_api_key(
+    api_key_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    api_key = db.scalar(select(ApiKey).where(ApiKey.id == api_key_id, ApiKey.owner_id == user.id))
+    if not api_key:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
+    api_key.revoked = True
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def _revoke_user_refresh_tokens(db: Session, user: User) -> None:

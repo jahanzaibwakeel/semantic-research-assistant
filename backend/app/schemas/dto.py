@@ -54,6 +54,25 @@ class PasswordChangeRequest(BaseModel):
     new_password: str
 
 
+class ApiKeyCreate(BaseModel):
+    name: str
+
+
+class ApiKeyRead(BaseModel):
+    id: uuid.UUID
+    name: str
+    key_prefix: str
+    revoked: bool
+    last_used_at: datetime | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ApiKeyCreated(ApiKeyRead):
+    api_key: str
+
+
 class DocumentRead(BaseModel):
     id: uuid.UUID
     project_id: uuid.UUID | None

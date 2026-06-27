@@ -1,4 +1,5 @@
 from app.models.entities import (
+    ApiKey,
     Document,
     EvaluationRecord,
     InteractionHistory,
@@ -12,6 +13,7 @@ from app.models.entities import (
 )
 
 __all__ = [
+    "ApiKey",
     "Document",
     "EvaluationRecord",
     "InteractionHistory",

@@ -65,6 +65,19 @@ export type EvaluationRecord = {
   created_at: string;
 };
 
+export type ApiKeyRecord = {
+  id: string;
+  name: string;
+  key_prefix: string;
+  revoked: boolean;
+  last_used_at: string | null;
+  created_at: string;
+};
+
+export type ApiKeyCreated = ApiKeyRecord & {
+  api_key: string;
+};
+
 export type OperationalStatus = {
   documents_by_status: Record<string, number>;
   documents_by_type: Record<string, number>;
@@ -158,6 +171,17 @@ export async function changePassword(token: string, currentPassword: string, new
     method: "POST",
     body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
   });
+}
+
+export async function createApiKey(token: string, name: string) {
+  return api<ApiKeyCreated>("/auth/api-keys", token, {
+    method: "POST",
+    body: JSON.stringify({ name })
+  });
+}
+
+export async function revokeApiKey(token: string, apiKeyId: string) {
+  await api<void>(`/auth/api-keys/${apiKeyId}`, token, { method: "DELETE" });
 }
 
 export async function downloadText(path: string, token: string | null): Promise<string> {

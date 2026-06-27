@@ -26,7 +26,7 @@ flowchart LR
 - `services`: business logic for RAG, retrieval, document lifecycle, storage, AI calls, usage tracking, exports, and web ingestion.
 - `models`: SQLAlchemy entities for users, documents, projects, notes, history, usage, evaluations, and research extractions.
 - `workers`: Celery jobs for document parsing, chunking, embedding, indexing, summarization, and extraction.
-- `core`: configuration, JWT/password helpers, logging, rate limiting, and security headers.
+- `core`: configuration, JWT/API-key/password helpers, logging, rate limiting, and security headers.
 
 ## Ingestion Flow
 
@@ -60,4 +60,4 @@ flowchart LR
 - `/health` provides liveness and `/health/ready` checks Postgres, Redis, and Qdrant.
 - `/api/metrics` exposes Prometheus-style application metrics.
 - Backup and restore scripts cover PostgreSQL, uploads, Qdrant data, and MinIO data.
-- Security controls include refresh-token revocation, rate limiting, security headers, upload validation, and per-user retrieval filters.
+- Security controls include refresh-token revocation, hashed API keys, rate limiting, security headers, upload validation, and per-user retrieval filters.

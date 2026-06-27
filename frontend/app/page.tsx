@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Brain, FileText, GitCompareArrows, LogOut, MessageSquareText, RefreshCcw, Search, Trash2, UploadCloud } from "lucide-react";
-import { api, apiUrl, changePassword, Citation, DocumentItem, downloadText, EvaluationRecord, LiteratureMatrixRow, login, logout, OperationalStatus, Project, register, ResearchNote, SavedQuery, UsageSummary } from "@/lib/api";
+import { api, apiUrl, ApiKeyRecord, changePassword, Citation, createApiKey, DocumentItem, downloadText, EvaluationRecord, LiteratureMatrixRow, login, logout, OperationalStatus, Project, register, ResearchNote, revokeApiKey, SavedQuery, UsageSummary } from "@/lib/api";
 import { SourceList } from "@/components/SourceList";
 
 type Mode = "ask" | "search" | "compare";
@@ -21,11 +21,14 @@ export default function Page() {
   const [notes, setNotes] = useState<ResearchNote[]>([]);
   const [usage, setUsage] = useState<UsageSummary[]>([]);
   const [evaluations, setEvaluations] = useState<EvaluationRecord[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
   const [opsStatus, setOpsStatus] = useState<OperationalStatus | null>(null);
   const [exportPreview, setExportPreview] = useState("");
   const [projectName, setProjectName] = useState("Reading List");
   const [uploadTags, setUploadTags] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
+  const [apiKeyName, setApiKeyName] = useState("Research CLI");
+  const [newApiKey, setNewApiKey] = useState("");
   const [noteBody, setNoteBody] = useState("");
   const [selectedDocument, setSelectedDocument] = useState<string>("");
   const [selectedProject, setSelectedProject] = useState<string>("");
@@ -101,12 +104,14 @@ export default function Page() {
     setProjects(projectItems);
     setSavedQueries(savedItems);
     setNotes(noteItems);
-    const [usageItems, evaluationItems] = await Promise.all([
+    const [usageItems, evaluationItems, apiKeyItems] = await Promise.all([
       api<UsageSummary[]>("/exports/usage", token),
-      api<EvaluationRecord[]>("/exports/evaluations", token)
+      api<EvaluationRecord[]>("/exports/evaluations", token),
+      api<ApiKeyRecord[]>("/auth/api-keys", token)
     ]);
     setUsage(usageItems);
     setEvaluations(evaluationItems);
+    setApiKeys(apiKeyItems);
     setOpsStatus(await api<OperationalStatus>("/ops/status", token));
   }
 
@@ -165,6 +170,38 @@ export default function Page() {
       setToken(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Password change failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitApiKey(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !apiKeyName.trim()) return;
+    setBusy(true);
+    setError("");
+    setAccountMessage("");
+    try {
+      const created = await createApiKey(token, apiKeyName.trim());
+      setNewApiKey(created.api_key);
+      setApiKeyName("");
+      await loadWorkspace();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "API key creation failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeApiKey(apiKeyId: string) {
+    if (!token) return;
+    setBusy(true);
+    setError("");
+    try {
+      await revokeApiKey(token, apiKeyId);
+      await loadWorkspace();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "API key revoke failed");
     } finally {
       setBusy(false);
     }
@@ -608,6 +645,36 @@ export default function Page() {
             {accountMessage ? <p className="mt-3 text-xs font-semibold text-teal">{accountMessage}</p> : null}
             <button className="focus-ring mt-4 w-full rounded-lg border border-ink px-4 py-2 text-sm font-bold text-ink" disabled={busy || !currentPassword || !newPassword}>Change password</button>
           </form>
+
+          <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-soft">
+            <div className="font-bold">API Keys</div>
+            <form onSubmit={submitApiKey} className="mt-4 flex gap-2">
+              <input className="focus-ring min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" placeholder="Key name" value={apiKeyName} onChange={(event) => setApiKeyName(event.target.value)} />
+              <button className="focus-ring rounded-lg bg-ink px-3 py-2 text-sm font-bold text-white" disabled={busy || !apiKeyName.trim()}>Create</button>
+            </form>
+            {newApiKey ? (
+              <div className="mt-3 rounded-lg border border-teal/30 bg-teal/10 p-3">
+                <div className="text-xs font-bold text-teal">Copy this key now</div>
+                <code className="mt-2 block break-all text-xs text-ink">{newApiKey}</code>
+              </div>
+            ) : null}
+            <div className="mt-4 space-y-2">
+              {apiKeys.length === 0 ? <p className="text-xs text-stone-500">No API keys yet.</p> : null}
+              {apiKeys.map((key) => (
+                <div key={key.id} className="rounded-lg border border-stone-200 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-bold">{key.name}</div>
+                      <div className="mt-1 text-xs text-stone-500">{key.key_prefix}... / {key.revoked ? "revoked" : "active"}</div>
+                    </div>
+                    {!key.revoked ? (
+                      <button className="focus-ring rounded-lg border border-stone-300 px-2 py-1 text-xs font-bold text-ink" onClick={() => removeApiKey(key.id)} disabled={busy}>Revoke</button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
 
           <form onSubmit={upload} className="rounded-lg border border-stone-200 bg-white p-5 shadow-soft">
             <div className="flex items-center gap-2 font-bold"><UploadCloud size={19} /> Add Source</div>

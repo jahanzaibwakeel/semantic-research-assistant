@@ -5,6 +5,7 @@
 - FastAPI backend with clean service architecture.
 - Next.js dashboard for upload, search, Q&A, comparison, exports, and research workflows.
 - JWT authentication with refresh-token rotation and revocation.
+- API keys for programmatic access and automation.
 - PDF, TXT, Markdown, and URL ingestion.
 - LangChain loaders, text splitting, RAG orchestration, and cited answer generation.
 - Qdrant vector storage with user/document/project filters.
@@ -24,4 +25,4 @@
 - OpenTelemetry traces across API, worker, model calls, and Qdrant operations.
 - Antivirus or malware scanning before document processing.
 - Browser-based PDF preview with highlighted cited passages.
-- Fine-grained API keys for programmatic ingestion and search.
+- Scoped API keys with per-key permissions and usage limits.
