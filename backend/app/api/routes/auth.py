@@ -1,0 +1,115 @@
+from typing import Annotated
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user
+from app.core.config import get_settings
+from app.core.security import create_access_token, create_refresh_token, hash_password, hash_token, verify_password
+from app.db.session import get_db
+from app.models.entities import RefreshToken, User
+from app.schemas.dto import LogoutRequest, PasswordChangeRequest, RefreshTokenRequest, Token, UserCreate, UserRead
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+def register(payload: UserCreate, db: Annotated[Session, Depends(get_db)]):
+    existing = db.scalar(select(User).where(User.email == payload.email.lower()))
+    if existing:
+        raise HTTPException(status_code=409, detail="Email already registered")
+    user = User(
+        email=payload.email.lower(),
+        full_name=payload.full_name,
+        hashed_password=hash_password(payload.password),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return _issue_tokens(db, user)
+
+
+@router.post("/login", response_model=Token)
+def login(form: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annotated[Session, Depends(get_db)]):
+    user = db.scalar(select(User).where(User.email == form.username.lower()))
+    if not user or not verify_password(form.password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
+    return _issue_tokens(db, user)
+
+
+@router.post("/refresh", response_model=Token)
+def refresh(payload: RefreshTokenRequest, db: Annotated[Session, Depends(get_db)]):
+    token_hash = hash_token(payload.refresh_token)
+    stored = db.scalar(select(RefreshToken).where(RefreshToken.token_hash == token_hash, RefreshToken.revoked.is_(False)))
+    if not stored or stored.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    user = db.get(User, stored.owner_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    stored.revoked = True
+    db.commit()
+    return _issue_tokens(db, user)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(
+    payload: LogoutRequest,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(get_current_user)],
+):
+    if payload.refresh_token:
+        token_hash = hash_token(payload.refresh_token)
+        stored = db.scalar(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
+        if stored:
+            stored.revoked = True
+            db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+def logout_all(user: Annotated[User, Depends(get_current_user)], db: Annotated[Session, Depends(get_db)]):
+    _revoke_user_refresh_tokens(db, user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    payload: PasswordChangeRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    if not verify_password(payload.current_password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must be at least 8 characters")
+    user.hashed_password = hash_password(payload.new_password)
+    _revoke_user_refresh_tokens(db, user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/me", response_model=UserRead)
+def me(user: Annotated[User, Depends(get_current_user)]):
+    return user
+
+
+def _revoke_user_refresh_tokens(db: Session, user: User) -> None:
+    tokens = db.scalars(select(RefreshToken).where(RefreshToken.owner_id == user.id, RefreshToken.revoked.is_(False))).all()
+    for token in tokens:
+        token.revoked = True
+    db.commit()
+
+
+def _issue_tokens(db: Session, user: User) -> Token:
+    settings = get_settings()
+    refresh_value = create_refresh_token()
+    refresh = RefreshToken(
+        owner_id=user.id,
+        token_hash=hash_token(refresh_value),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days),
+    )
+    db.add(refresh)
+    db.commit()
+    return Token(access_token=create_access_token(str(user.id)), refresh_token=refresh_value, user=user)
