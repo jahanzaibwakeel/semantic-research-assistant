@@ -15,6 +15,7 @@ Users can register, upload PDFs, index papers into Qdrant, run semantic search, 
 Deeper docs:
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [API Usage](docs/API_USAGE.md)
 - [Deployment Runbook](DEPLOYMENT.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)
@@ -26,6 +27,7 @@ Deeper docs:
 - Refresh-token rotation for longer-lived sessions.
 - Logout, logout-all, and password change flows with refresh-token revocation.
 - API keys for programmatic ingestion, search, Q&A, exports, and automation.
+- Standard-library Python CLI example for API-key workflows.
 - Memory or Redis-backed per-IP rate limiting for API abuse protection.
 - Security response headers for production browser hardening.
 - Project workspaces for grouping documents and research notes.

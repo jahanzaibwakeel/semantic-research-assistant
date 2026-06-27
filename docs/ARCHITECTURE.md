@@ -1,12 +1,13 @@
 # Architecture
 
-The Semantic Research Assistant is a full-stack retrieval-augmented generation system for private document research. It ingests PDFs, text files, Markdown, and URLs; extracts and chunks text; embeds chunks into Qdrant; stores metadata in PostgreSQL; and exposes cited search, Q&A, summaries, comparisons, and literature synthesis through a Next.js dashboard.
+The Semantic Research Assistant is a full-stack retrieval-augmented generation system for private document research. It ingests PDFs, text files, Markdown, and URLs; extracts and chunks text; embeds chunks into Qdrant; stores metadata in PostgreSQL; and exposes cited search, Q&A, summaries, comparisons, and literature synthesis through a Next.js dashboard and API-key workflows.
 
 ## System Diagram
 
 ```mermaid
 flowchart LR
     User["Researcher"] --> UI["Next.js Dashboard"]
+    Script["CLI or Automation"] --> API
     UI --> API["FastAPI API"]
     API --> DB["PostgreSQL Metadata"]
     API --> Redis["Redis Broker"]

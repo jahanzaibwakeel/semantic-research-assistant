@@ -6,6 +6,7 @@
 - Next.js dashboard for upload, search, Q&A, comparison, exports, and research workflows.
 - JWT authentication with refresh-token rotation and revocation.
 - API keys for programmatic access and automation.
+- Standard-library Python CLI client for upload, search, Q&A, and URL ingestion.
 - PDF, TXT, Markdown, and URL ingestion.
 - LangChain loaders, text splitting, RAG orchestration, and cited answer generation.
 - Qdrant vector storage with user/document/project filters.
