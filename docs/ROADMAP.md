@@ -4,6 +4,7 @@
 
 - FastAPI backend with clean service architecture.
 - Next.js dashboard for upload, search, Q&A, comparison, exports, and research workflows.
+- Admin operations panel for user management visibility, failed jobs, and storage usage.
 - JWT authentication with refresh-token rotation and revocation.
 - Scoped API keys with optional daily request limits for programmatic access and automation.
 - Standard-library Python CLI client for upload, search, Q&A, and URL ingestion.
@@ -22,7 +23,6 @@
 ## Next Improvements
 
 - Full OCR pipeline with Tesseract or a managed OCR provider.
-- Admin panel for user management, failed jobs, and storage usage.
 - Team workspaces with roles and document sharing.
 - OpenTelemetry traces across API, worker, model calls, and Qdrant operations.
 - Browser-based PDF preview with highlighted cited passages.

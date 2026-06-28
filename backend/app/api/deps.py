@@ -101,7 +101,7 @@ def _enforce_api_key_quota(api_key: ApiKey) -> None:
 def _required_scope(request: Request) -> str | None:
     path = request.url.path
     method = request.method.upper()
-    if path.startswith("/api/auth/api-keys") or path.startswith("/api/auth/change-password") or path.startswith("/api/auth/logout"):
+    if path.startswith("/api/admin") or path.startswith("/api/auth/api-keys") or path.startswith("/api/auth/change-password") or path.startswith("/api/auth/logout"):
         return None
     if path.startswith("/api/auth/me"):
         return "profile:read"

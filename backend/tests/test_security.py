@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from fastapi import HTTPException
 
+from app.api.routes.admin import require_admin
 from app.api.routes.auth import _revoke_user_refresh_tokens, change_password
 from app.api.deps import _enforce_api_key_quota, _required_scope
 from app.core.config import Settings
@@ -110,6 +111,23 @@ class AuthSessionTests(unittest.TestCase):
             )
 
         self.assertEqual(exc.exception.status_code, 400)
+
+
+class AdminAccessTests(unittest.TestCase):
+    def test_require_admin_rejects_unconfigured_user(self):
+        user = User(id=uuid.uuid4(), email="researcher@example.com", hashed_password="hash")
+        settings = SimpleNamespace(admin_emails=["admin@example.com"])
+
+        with self.assertRaises(HTTPException) as exc:
+            require_admin(user, settings)
+
+        self.assertEqual(exc.exception.status_code, 403)
+
+    def test_require_admin_accepts_configured_user(self):
+        user = User(id=uuid.uuid4(), email="admin@example.com", hashed_password="hash")
+        settings = SimpleNamespace(admin_emails=["admin@example.com"])
+
+        self.assertIs(require_admin(user, settings), user)
 
 
 if __name__ == "__main__":

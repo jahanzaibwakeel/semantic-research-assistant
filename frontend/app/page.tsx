@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Brain, FileText, GitCompareArrows, LogOut, MessageSquareText, RefreshCcw, Search, Trash2, UploadCloud } from "lucide-react";
-import { api, apiUrl, ApiKeyRecord, changePassword, Citation, createApiKey, DocumentItem, downloadText, EvaluationRecord, LiteratureMatrixRow, login, logout, OperationalStatus, Project, register, ResearchNote, revokeApiKey, SavedQuery, UsageSummary } from "@/lib/api";
+import { api, apiUrl, AdminOverview, ApiKeyRecord, changePassword, Citation, createApiKey, DocumentItem, downloadText, EvaluationRecord, LiteratureMatrixRow, login, logout, OperationalStatus, Project, register, ResearchNote, revokeApiKey, SavedQuery, UsageSummary } from "@/lib/api";
 import { SourceList } from "@/components/SourceList";
 
 type Mode = "ask" | "search" | "compare";
@@ -24,6 +24,7 @@ export default function Page() {
   const [evaluations, setEvaluations] = useState<EvaluationRecord[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
   const [opsStatus, setOpsStatus] = useState<OperationalStatus | null>(null);
+  const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
   const [exportPreview, setExportPreview] = useState("");
   const [projectName, setProjectName] = useState("Reading List");
   const [uploadTags, setUploadTags] = useState("");
@@ -116,6 +117,11 @@ export default function Page() {
     setEvaluations(evaluationItems);
     setApiKeys(apiKeyItems);
     setOpsStatus(await api<OperationalStatus>("/ops/status", token));
+    try {
+      setAdminOverview(await api<AdminOverview>("/admin/overview", token));
+    } catch {
+      setAdminOverview(null);
+    }
   }
 
   async function loadMatrix() {
@@ -984,6 +990,45 @@ export default function Page() {
               <pre className="mt-4 max-h-80 overflow-auto rounded-lg bg-ink p-4 text-xs leading-5 text-white">{exportPreview}</pre>
             ) : null}
           </section>
+
+          {adminOverview ? (
+            <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-soft">
+              <h2 className="text-lg font-black">Admin Operations</h2>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-stone-200 p-3">
+                  <div className="text-sm font-bold">Users</div>
+                  <div className="mt-2 space-y-2 text-sm text-stone-700">
+                    {adminOverview.users.slice(0, 5).map((user) => (
+                      <div key={user.id} className="rounded-md bg-stone-50 p-2">
+                        <div className="truncate font-semibold">{user.email}</div>
+                        <div className="text-xs text-stone-500">{user.document_count} docs / {user.api_key_count} keys</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-stone-200 p-3">
+                  <div className="text-sm font-bold">Failed Jobs</div>
+                  <div className="mt-2 space-y-2 text-sm text-stone-700">
+                    {adminOverview.failed_jobs.slice(0, 4).map((job) => (
+                      <div key={job.document_id} className="rounded-md bg-red-50 p-2">
+                        <div className="truncate font-semibold text-red-700">{job.filename}</div>
+                        <div className="truncate text-xs text-red-600">{job.owner_email} / {job.status}</div>
+                      </div>
+                    ))}
+                    {!adminOverview.failed_jobs.length ? <p className="text-stone-500">No failed jobs.</p> : null}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-stone-200 p-3">
+                  <div className="text-sm font-bold">Storage</div>
+                  <div className="mt-2 space-y-1 text-sm text-stone-700">
+                    <div className="flex justify-between gap-3"><span>Backend</span><span>{adminOverview.storage.backend}</span></div>
+                    <div className="flex justify-between gap-3"><span>Files</span><span>{adminOverview.storage.local_upload_files}</span></div>
+                    <div className="flex justify-between gap-3"><span>Local MB</span><span>{(adminOverview.storage.local_upload_bytes / 1024 / 1024).toFixed(2)}</span></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           <SourceList sources={sources} />
         </section>

@@ -4,7 +4,7 @@ from qdrant_client import QdrantClient
 from redis import Redis
 from sqlalchemy import text
 
-from app.api.routes import auth, documents, exports, history, metrics, ops, projects, qa, research, search
+from app.api.routes import admin, auth, documents, exports, history, metrics, ops, projects, qa, research, search
 from app.core.config import get_settings
 from app.core.logging import RateLimitMiddleware, RequestLoggingMiddleware, SecurityHeadersMiddleware, configure_logging
 from app.db.session import engine
@@ -56,6 +56,7 @@ def create_app() -> FastAPI:
         return {"status": status, "checks": checks}
 
     app.include_router(auth.router, prefix=settings.api_prefix)
+    app.include_router(admin.router, prefix=settings.api_prefix)
     app.include_router(documents.router, prefix=settings.api_prefix)
     app.include_router(search.router, prefix=settings.api_prefix)
     app.include_router(qa.router, prefix=settings.api_prefix)

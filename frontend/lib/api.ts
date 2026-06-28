@@ -87,6 +87,30 @@ export type OperationalStatus = {
   recent_failures: DocumentItem[];
 };
 
+export type AdminOverview = {
+  users: {
+    id: string;
+    email: string;
+    full_name: string | null;
+    document_count: number;
+    api_key_count: number;
+    created_at: string;
+  }[];
+  failed_jobs: {
+    document_id: string;
+    owner_email: string;
+    filename: string;
+    status: string;
+    error_message: string | null;
+    updated_at: string;
+  }[];
+  storage: {
+    backend: string;
+    local_upload_bytes: number;
+    local_upload_files: number;
+  };
+};
+
 export type Citation = {
   document_id: string;
   filename: string;

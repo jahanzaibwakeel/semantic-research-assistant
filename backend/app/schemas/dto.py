@@ -280,6 +280,36 @@ class OperationalStatus(BaseModel):
     recent_failures: list[DocumentRead]
 
 
+class AdminUserRead(BaseModel):
+    id: uuid.UUID
+    email: EmailStr
+    full_name: str | None
+    document_count: int
+    api_key_count: int
+    created_at: datetime
+
+
+class AdminFailedJob(BaseModel):
+    document_id: uuid.UUID
+    owner_email: EmailStr
+    filename: str
+    status: str
+    error_message: str | None
+    updated_at: datetime
+
+
+class AdminStorageStatus(BaseModel):
+    backend: str
+    local_upload_bytes: int
+    local_upload_files: int
+
+
+class AdminOverview(BaseModel):
+    users: list[AdminUserRead]
+    failed_jobs: list[AdminFailedJob]
+    storage: AdminStorageStatus
+
+
 class EvaluationRead(BaseModel):
     id: uuid.UUID
     document_id: uuid.UUID | None

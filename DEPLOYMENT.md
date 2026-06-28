@@ -3,7 +3,7 @@
 ## Local Production-Like Stack
 
 1. Copy `.env.example` to `.env`.
-2. Set `SECRET_KEY`, `APP_DOMAIN`, `ACME_EMAIL`, model credentials, and `RATE_LIMIT_BACKEND=redis`.
+2. Set `SECRET_KEY`, `ADMIN_EMAILS`, `APP_DOMAIN`, `ACME_EMAIL`, model credentials, and `RATE_LIMIT_BACKEND=redis`.
 3. Start the production-style stack:
 
 ```bash
@@ -47,6 +47,7 @@ powershell -ExecutionPolicy Bypass -File scripts/restore-postgres.ps1 -SqlFile b
 
 - Use HTTPS with a real `APP_DOMAIN`.
 - Rotate `SECRET_KEY`.
+- Set `ADMIN_EMAILS` to a small list of trusted operators.
 - Restrict `CORS_ORIGINS`.
 - Keep `SECURITY_HEADERS_ENABLED=true` unless another edge proxy owns those headers.
 - Keep `.env` out of git.

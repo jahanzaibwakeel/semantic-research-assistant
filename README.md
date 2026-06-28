@@ -32,6 +32,7 @@ Deeper docs:
 - Memory or Redis-backed per-IP rate limiting for API abuse protection.
 - Security response headers for production browser hardening.
 - Project workspaces for grouping documents and research notes.
+- Admin operations panel for configured admins with user, failed-job, and storage visibility.
 - Saved queries and pinned research notes.
 - Usage tracking with estimated token counts by operation.
 - Automatic citation coverage and groundedness evaluation records.
@@ -149,6 +150,7 @@ python -m unittest discover tests
 ## Important Environment Variables
 
 - `SECRET_KEY`: JWT signing secret.
+- `ADMIN_EMAILS`: JSON list of user emails allowed to access admin operations.
 - `REFRESH_TOKEN_EXPIRE_DAYS`: refresh token lifetime.
 - `RATE_LIMIT_REQUESTS`: max requests per IP per rate-limit window.
 - `RATE_LIMIT_WINDOW_SECONDS`: rate-limit window duration.
@@ -188,6 +190,7 @@ python -m unittest discover tests
 - `POST /api/auth/api-keys`
 - `DELETE /api/auth/api-keys/{api_key_id}`
 - `GET /api/auth/me`
+- `GET /api/admin/overview`
 - `GET /api/projects`
 - `POST /api/projects`
 - `DELETE /api/projects/{project_id}`

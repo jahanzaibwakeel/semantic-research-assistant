@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="change-me-in-production")
     access_token_expire_minutes: int = 60 * 24
     refresh_token_expire_days: int = 30
+    admin_emails: list[str] = []
     rate_limit_requests: int = 120
     rate_limit_window_seconds: int = 60
     rate_limit_backend: str = "memory"
