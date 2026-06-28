@@ -16,6 +16,7 @@ Deeper docs:
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [API Usage](docs/API_USAGE.md)
+- [Evaluation](docs/EVALUATION.md)
 - [Deployment Runbook](DEPLOYMENT.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)
@@ -34,6 +35,7 @@ Deeper docs:
 - Saved queries and pinned research notes.
 - Usage tracking with estimated token counts by operation.
 - Automatic citation coverage and groundedness evaluation records.
+- API-driven RAG regression evaluation runner with JSON/Markdown reports.
 - Markdown research report export.
 - BibTeX bibliography export.
 - Optional S3-compatible object storage with MinIO in Docker Compose.

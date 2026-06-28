@@ -78,6 +78,8 @@ python examples/research_client.py ingest-url "https://example.com/article" --ta
 
 The client reads `SRA_API_URL` and `SRA_API_KEY`, and also accepts `--api-url` for one-off calls.
 
+For regression testing answer quality, see [Evaluation](EVALUATION.md).
+
 ## Response Shape
 
 Search and Q&A responses return citation metadata:

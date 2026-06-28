@@ -1,0 +1,26 @@
+{
+  "name": "sample-rag-quality",
+  "description": "Starter regression dataset for cited RAG answers. Replace document_id values after indexing your own corpus.",
+  "defaults": {
+    "mode": "hybrid",
+    "limit": 8,
+    "min_sources": 1,
+    "required_answer_terms": []
+  },
+  "cases": [
+    {
+      "id": "central-findings",
+      "question": "What are the central findings of this document?",
+      "document_id": null,
+      "required_answer_terms": ["finding"],
+      "min_sources": 1
+    },
+    {
+      "id": "methods-and-limitations",
+      "question": "What methods are used, and what limitations are reported?",
+      "document_id": null,
+      "required_answer_terms": ["method", "limitation"],
+      "min_sources": 1
+    }
+  ]
+}
