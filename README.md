@@ -69,6 +69,7 @@ Deeper docs:
 - Production Compose override with Caddy reverse proxy.
 - Backup, restore, and maintenance PowerShell scripts.
 - Prometheus-style metrics endpoint.
+- Optional OpenTelemetry tracing for FastAPI, SQLAlchemy, Redis, Celery, Qdrant, embeddings, and LLM calls.
 - GitHub Actions CI with backend, frontend, and Docker build checks.
 - Alembic migrations applied automatically by the backend container.
 - PDF size, extension, content type, file signature, and duplicate-upload validation.
@@ -156,6 +157,9 @@ python -m unittest discover tests
 - `RATE_LIMIT_WINDOW_SECONDS`: rate-limit window duration.
 - `RATE_LIMIT_BACKEND`: `memory` for local dev or `redis` for distributed deployments.
 - `SECURITY_HEADERS_ENABLED`: toggles hardened browser response headers.
+- `OTEL_ENABLED`: enables OpenTelemetry tracing.
+- `OTEL_SERVICE_NAME`: service name attached to emitted traces.
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: OTLP gRPC endpoint, for example an OpenTelemetry Collector.
 - `DATABASE_URL`: SQLAlchemy PostgreSQL URL.
 - `REDIS_URL`: Redis broker/backend URL.
 - `QDRANT_URL`: Qdrant HTTP URL.

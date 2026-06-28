@@ -60,5 +60,6 @@ flowchart LR
 - Caddy terminates HTTPS in the production Compose override.
 - `/health` provides liveness and `/health/ready` checks Postgres, Redis, and Qdrant.
 - `/api/metrics` exposes Prometheus-style application metrics.
+- OpenTelemetry can trace FastAPI requests, SQLAlchemy queries, Redis/Celery work, Qdrant operations, embeddings, and LLM calls.
 - Backup and restore scripts cover PostgreSQL, uploads, Qdrant data, and MinIO data.
 - Security controls include refresh-token revocation, hashed scoped API keys, per-key daily usage limits, rate limiting, security headers, upload validation, and per-user retrieval filters.

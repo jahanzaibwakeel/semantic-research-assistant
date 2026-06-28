@@ -5,6 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.tracing import traced_span
 from app.models.entities import Document, ResearchExtraction
 from app.services.ai import get_llm
 from app.services.rag import answer_question
@@ -96,7 +97,8 @@ def synthesize_literature(db: Session, owner_id: uuid.UUID, focus: str) -> str:
         ]
     )
     matrix_json = json.dumps(matrix, ensure_ascii=True)
-    synthesis = (prompt | get_llm()).invoke({"focus": focus, "matrix": matrix_json}).content
+    with traced_span("llm.synthesize_literature", matrix_rows=len(rows), focus_length=len(focus)):
+        synthesis = (prompt | get_llm()).invoke({"focus": focus, "matrix": matrix_json}).content
     record_usage(db, owner_id, "literature_synthesis", f"{focus}\n\n{matrix_json}", synthesis)
     db.commit()
     return synthesis

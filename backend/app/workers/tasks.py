@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.core.tracing import traced_span
 from app.db.session import SessionLocal
 from app.models.entities import Document
 from app.services.documents import load_document, split_pages
@@ -15,46 +16,56 @@ from app.workers.celery_app import celery_app
 @celery_app.task(bind=True, name="app.workers.tasks.process_document", max_retries=3)
 def process_document(self, document_id: str) -> None:
     db = SessionLocal()
+    document = None
     try:
-        document = db.get(Document, uuid.UUID(document_id))
-        if not document or document.status == "deleted":
-            return
-        document.status = "processing"
-        db.commit()
+        with traced_span("worker.process_document", document_id=document_id):
+            document = db.get(Document, uuid.UUID(document_id))
+            if not document or document.status == "deleted":
+                return
+            document.status = "processing"
+            db.commit()
 
-        local_source = StorageService().download_to_path(
-            document.storage_path,
-            Path("storage/cache") / str(document.owner_id) / f"{document.id}.{document.document_type}",
-        )
-        pages = load_document(local_source, document.document_type)
-        chunks = split_pages(pages, document.id, document.filename)
-        for chunk in chunks:
-            chunk.metadata["owner_id"] = str(document.owner_id)
-            chunk.metadata["project_id"] = str(document.project_id) if document.project_id else None
-            chunk.metadata["tags"] = document.tags
-            chunk.metadata["source_url"] = document.source_url
-            chunk.metadata["document_type"] = document.document_type
+            with traced_span("document.download_source", document_id=str(document.id), document_type=document.document_type):
+                local_source = StorageService().download_to_path(
+                    document.storage_path,
+                    Path("storage/cache") / str(document.owner_id) / f"{document.id}.{document.document_type}",
+                )
+            with traced_span("document.load_and_split", document_id=str(document.id), document_type=document.document_type):
+                pages = load_document(local_source, document.document_type)
+                chunks = split_pages(pages, document.id, document.filename)
+            for chunk in chunks:
+                chunk.metadata["owner_id"] = str(document.owner_id)
+                chunk.metadata["project_id"] = str(document.project_id) if document.project_id else None
+                chunk.metadata["tags"] = document.tags
+                chunk.metadata["source_url"] = document.source_url
+                chunk.metadata["document_type"] = document.document_type
 
-        QdrantStore().upsert_documents(chunks)
-        document.page_count = len(pages)
-        document.chunk_count = len(chunks)
-        document.indexed_at = datetime.now(timezone.utc)
-        document.status = "summarizing"
-        db.commit()
+            with traced_span("qdrant.upsert_document_chunks", document_id=str(document.id), chunk_count=len(chunks)):
+                QdrantStore().upsert_documents(chunks)
+            document.page_count = len(pages)
+            document.chunk_count = len(chunks)
+            document.indexed_at = datetime.now(timezone.utc)
+            document.status = "summarizing"
+            db.commit()
 
-        summary, key_points = summarize_document(db, document.owner_id, document)
-        document.summary = summary
-        document.key_points = key_points
-        document.status = "extracting"
-        db.commit()
+            with traced_span("llm.summarize_document", document_id=str(document.id)):
+                summary, key_points = summarize_document(db, document.owner_id, document)
+            document.summary = summary
+            document.key_points = key_points
+            document.status = "extracting"
+            db.commit()
 
-        extract_research_profile(db, document.owner_id, document)
-        document.status = "ready"
-        document.processed_at = datetime.now(timezone.utc)
-        db.commit()
+            with traced_span("llm.extract_research_profile", document_id=str(document.id)):
+                extract_research_profile(db, document.owner_id, document)
+            document.status = "ready"
+            document.processed_at = datetime.now(timezone.utc)
+            db.commit()
     except Exception as exc:
         db.rollback()
-        document = db.get(Document, uuid.UUID(document_id))
+        try:
+            document = db.get(Document, uuid.UUID(document_id))
+        except ValueError:
+            document = None
         if document:
             document.status = "retrying" if self.request.retries < self.max_retries else "failed"
             document.error_message = str(exc)

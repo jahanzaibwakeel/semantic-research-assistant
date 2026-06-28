@@ -22,3 +22,10 @@ email-validator==2.2.0
 pytest==8.3.4
 httpx==0.28.1
 boto3==1.35.90
+opentelemetry-api>=1.29.0,<2.0.0
+opentelemetry-sdk>=1.29.0,<2.0.0
+opentelemetry-exporter-otlp>=1.29.0,<2.0.0
+opentelemetry-instrumentation-celery>=0.50b0,<1.0.0
+opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0
+opentelemetry-instrumentation-redis>=0.50b0,<1.0.0
+opentelemetry-instrumentation-sqlalchemy>=0.50b0,<1.0.0

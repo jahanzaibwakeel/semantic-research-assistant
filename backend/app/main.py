@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.api.routes import admin, auth, documents, exports, history, metrics, ops, projects, qa, research, search
 from app.core.config import get_settings
 from app.core.logging import RateLimitMiddleware, RequestLoggingMiddleware, SecurityHeadersMiddleware, configure_logging
+from app.core.tracing import configure_tracing
 from app.db.session import engine
 
 
@@ -14,6 +15,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging()
     app = FastAPI(title=settings.app_name, version="1.0.0")
+    configure_tracing(app, engine)
 
     app.add_middleware(
         CORSMiddleware,

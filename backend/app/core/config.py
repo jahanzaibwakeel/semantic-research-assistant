@@ -24,6 +24,9 @@ class Settings(BaseSettings):
         "style-src 'self' 'unsafe-inline'; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
     )
+    otel_enabled: bool = False
+    otel_service_name: str = "semantic-research-assistant"
+    otel_exporter_otlp_endpoint: str | None = None
 
     database_url: str = "postgresql+psycopg://research:research@postgres:5432/research"
     redis_url: str = "redis://redis:6379/0"

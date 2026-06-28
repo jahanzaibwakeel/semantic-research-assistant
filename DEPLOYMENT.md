@@ -35,6 +35,7 @@ powershell -ExecutionPolicy Bypass -File scripts/restore-postgres.ps1 -SqlFile b
 - Readiness: `/health/ready`
 - Metrics: `/api/metrics`
 - Operational status: `/api/ops/status`
+- Traces: set `OTEL_ENABLED=true` and `OTEL_EXPORTER_OTLP_ENDPOINT` to your OpenTelemetry Collector.
 
 ## Scaling Notes
 
@@ -42,6 +43,7 @@ powershell -ExecutionPolicy Bypass -File scripts/restore-postgres.ps1 -SqlFile b
 - Scale Celery workers independently for document-heavy workloads.
 - Prefer managed Postgres, Redis, Qdrant, and S3-compatible storage for production.
 - Enable `FILE_SCAN_ENABLED=true` and set `FILE_SCAN_COMMAND` to your scanner wrapper before accepting public uploads.
+- Enable OpenTelemetry when running distributed API and worker instances so retrieval, model calls, and vector operations are traceable.
 
 ## Security Checklist
 

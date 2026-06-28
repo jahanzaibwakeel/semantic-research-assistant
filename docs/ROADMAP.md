@@ -19,11 +19,11 @@
 - Summaries, key points, structured research extraction, literature matrix, and synthesis.
 - Docker Compose development and production stacks.
 - Caddy reverse proxy, backup/restore scripts, metrics, and CI.
+- OpenTelemetry traces across API, worker, database, Redis, model, and Qdrant operations.
 
 ## Next Improvements
 
 - Full OCR pipeline with Tesseract or a managed OCR provider.
 - Team workspaces with roles and document sharing.
-- OpenTelemetry traces across API, worker, model calls, and Qdrant operations.
 - Browser-based PDF preview with highlighted cited passages.
 - Team-level API key policies and audit exports.

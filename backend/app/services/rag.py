@@ -5,6 +5,7 @@ import uuid
 from langchain_core.prompts import ChatPromptTemplate
 from sqlalchemy.orm import Session
 
+from app.core.tracing import traced_span
 from app.models.entities import Document, InteractionHistory
 from app.schemas.dto import SourceCitation
 from app.services.ai import get_llm
@@ -119,7 +120,8 @@ def answer_question(
             ("human", "Question: {question}\n\nContext:\n{context}"),
         ]
     )
-    answer = (prompt | get_llm()).invoke({"question": question, "context": context}).content
+    with traced_span("llm.answer_question", source_count=len(citations), question_length=len(question)):
+        answer = (prompt | get_llm()).invoke({"question": question, "context": context}).content
     answer = _enforce_citations(answer, len(citations))
     record_usage(db, owner_id, "qa", f"{question}\n\n{context}", answer, document_id)
     record_answer_evaluation(db, owner_id, question, answer, len(citations), document_id)
@@ -171,7 +173,8 @@ def summarize_document(db: Session, owner_id: uuid.UUID, document: Document) -> 
             ("human", "{analysis}"),
         ]
     )
-    formatted = (prompt | get_llm()).invoke({"analysis": answer}).content
+    with traced_span("llm.format_summary", document_id=str(document.id)):
+        formatted = (prompt | get_llm()).invoke({"analysis": answer}).content
     record_usage(db, owner_id, "summary_format", answer, formatted, document.id)
     return formatted, answer
 
@@ -200,7 +203,8 @@ def compare_documents(db: Session, owner_id: uuid.UUID, left: Document, right: D
             ("human", "Comparison focus: {focus}\n\nContext:\n{context}"),
         ]
     )
-    answer = (prompt | get_llm()).invoke({"focus": focus, "context": context}).content
+    with traced_span("llm.compare_documents", source_count=len(citations), focus_length=len(focus)):
+        answer = (prompt | get_llm()).invoke({"focus": focus, "context": context}).content
     answer = _enforce_citations(answer, len(citations))
     record_usage(db, owner_id, "compare", f"{focus}\n\n{context}", answer)
     record_answer_evaluation(db, owner_id, focus, answer, len(citations))
