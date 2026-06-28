@@ -41,6 +41,7 @@ powershell -ExecutionPolicy Bypass -File scripts/restore-postgres.ps1 -SqlFile b
 - Use `RATE_LIMIT_BACKEND=redis` before horizontal backend scaling.
 - Scale Celery workers independently for document-heavy workloads.
 - Prefer managed Postgres, Redis, Qdrant, and S3-compatible storage for production.
+- Enable `FILE_SCAN_ENABLED=true` and set `FILE_SCAN_COMMAND` to your scanner wrapper before accepting public uploads.
 
 ## Security Checklist
 
@@ -51,3 +52,4 @@ powershell -ExecutionPolicy Bypass -File scripts/restore-postgres.ps1 -SqlFile b
 - Keep `.env` out of git.
 - Use logout-all after suspected account compromise to revoke outstanding refresh sessions.
 - Review URL ingestion policy before opening the app to untrusted users.
+- Run malware scanning for both uploaded files and URL-ingested content before document processing.

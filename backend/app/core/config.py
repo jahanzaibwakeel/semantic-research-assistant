@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     s3_secret_access_key: str | None = None
     s3_bucket: str = "research-documents"
     s3_region: str = "us-east-1"
+    file_scan_enabled: bool = False
+    file_scan_command: str | None = None
+    file_scan_timeout_seconds: int = 30
     ocr_enabled: bool = False
     ocr_min_text_chars: int = 200
     chunk_size: int = 1200
@@ -89,6 +92,10 @@ class Settings(BaseSettings):
             raise ValueError("EMBEDDING_PROVIDER must be either 'openai' or 'sentence-transformers'")
         if self.storage_backend not in {"local", "s3"}:
             raise ValueError("STORAGE_BACKEND must be either 'local' or 's3'")
+        if self.file_scan_enabled and not self.file_scan_command:
+            raise ValueError("FILE_SCAN_COMMAND must be set when FILE_SCAN_ENABLED is true")
+        if self.file_scan_timeout_seconds <= 0:
+            raise ValueError("FILE_SCAN_TIMEOUT_SECONDS must be greater than zero")
         return self
 
 

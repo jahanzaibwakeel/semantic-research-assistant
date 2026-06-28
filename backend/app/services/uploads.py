@@ -1,7 +1,12 @@
 import hashlib
+import os
+import shlex
+import subprocess
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
+
+from app.core.config import Settings
 
 PDF_CONTENT_TYPES = {"application/pdf", "application/x-pdf"}
 TEXT_CONTENT_TYPES = {"text/plain", "text/markdown", "application/octet-stream"}
@@ -53,6 +58,37 @@ def persist_upload(file: UploadFile, target: Path, max_upload_mb: int) -> tuple[
             buffer.write(chunk)
 
     return checksum.hexdigest(), document_type
+
+
+def scan_file(path: Path, settings: Settings) -> None:
+    if not settings.file_scan_enabled:
+        return
+    command = _scan_command(settings.file_scan_command or "", path)
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=settings.file_scan_timeout_seconds,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        path.unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="File scanner command was not found") from exc
+    except subprocess.TimeoutExpired as exc:
+        path.unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="File scanner timed out") from exc
+    if result.returncode != 0:
+        path.unlink(missing_ok=True)
+        detail = (result.stdout or result.stderr or "File scanner rejected the upload").strip()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"File scan failed: {detail[:500]}")
+
+
+def _scan_command(command: str, path: Path) -> list[str]:
+    parts = shlex.split(command, posix=os.name != "nt")
+    if "{path}" in command:
+        return [str(path) if part.strip("\"'") == "{path}" else part for part in parts]
+    return [*parts, str(path)]
 
 
 def persist_pdf_upload(file: UploadFile, target: Path, max_upload_mb: int) -> str:

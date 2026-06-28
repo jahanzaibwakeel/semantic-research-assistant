@@ -14,7 +14,7 @@ from app.models.entities import Document, EvaluationRecord, InteractionHistory, 
 from app.schemas.dto import BulkDocumentAction, DocumentRead, DocumentUpdate, UrlIngestRequest
 from app.services.qdrant_store import QdrantStore
 from app.services.storage import StorageService
-from app.services.uploads import persist_upload
+from app.services.uploads import persist_upload, scan_file
 from app.services.web_ingest import ingest_url_to_file
 from app.workers.tasks import process_document
 
@@ -58,7 +58,6 @@ def upload_document(
     suffix = Path(file.filename or "document.pdf").suffix.lower()
     target = settings.upload_dir / str(user.id) / f"{document_id}{suffix}"
     checksum, document_type = persist_upload(file, target, settings.max_upload_mb)
-    storage_path = StorageService().upload(target, f"{user.id}/{document_id}{suffix}")
 
     duplicate = db.scalar(
         select(Document).where(
@@ -70,6 +69,9 @@ def upload_document(
     if duplicate:
         target.unlink(missing_ok=True)
         raise HTTPException(status_code=409, detail="This document has already been uploaded")
+
+    scan_file(target, settings)
+    storage_path = StorageService().upload(target, f"{user.id}/{document_id}{suffix}")
 
     document = Document(
         id=document_id,
@@ -105,7 +107,6 @@ def ingest_url(
     document_id = uuid.uuid4()
     target = settings.upload_dir / str(user.id) / f"{document_id}.txt"
     checksum, document_type, inferred_title = ingest_url_to_file(payload.url, target)
-    storage_path = StorageService().upload(target, f"{user.id}/{document_id}.txt")
     duplicate = db.scalar(
         select(Document).where(
             Document.owner_id == user.id,
@@ -116,6 +117,9 @@ def ingest_url(
     if duplicate:
         target.unlink(missing_ok=True)
         raise HTTPException(status_code=409, detail="This URL content has already been ingested")
+
+    scan_file(target, settings)
+    storage_path = StorageService().upload(target, f"{user.id}/{document_id}.txt")
 
     title = payload.title or inferred_title
     document = Document(

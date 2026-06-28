@@ -22,6 +22,7 @@ Please do not open public issues for sensitive security reports. Contact the mai
 - Per-IP rate limiting with memory or Redis backend.
 - Security response headers.
 - Upload validation for extension, content type, PDF signature, size, and duplicate content.
+- Optional command-based malware scanning before uploaded or ingested files are stored and queued.
 - Per-user filters on metadata and vector retrieval paths.
 - Environment-based secret configuration.
 
@@ -33,5 +34,6 @@ Please do not open public issues for sensitive security reports. Contact the mai
 - Use `RATE_LIMIT_BACKEND=redis` when running more than one backend instance.
 - Revoke API keys that are no longer needed or may have been exposed.
 - Store uploaded documents in durable private object storage.
+- Enable `FILE_SCAN_ENABLED` with a scanner such as ClamAV for public deployments.
 - Keep Postgres, Redis, Qdrant, and object storage off the public internet.
 - Review URL ingestion rules before enabling public signups.

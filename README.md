@@ -71,6 +71,7 @@ Deeper docs:
 - GitHub Actions CI with backend, frontend, and Docker build checks.
 - Alembic migrations applied automatically by the backend container.
 - PDF size, extension, content type, file signature, and duplicate-upload validation.
+- Optional command-based antivirus/malware scan hook before storage and processing.
 - Document reprocess and soft-delete lifecycle actions.
 - Deleted document restore and permanent purge workflows.
 - Bulk document actions for delete, reprocess, and purge.
@@ -163,6 +164,9 @@ python -m unittest discover tests
 - `MAX_UPLOAD_MB`: maximum accepted PDF size.
 - `STORAGE_BACKEND`: `local` or `s3`.
 - `S3_ENDPOINT_URL`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`, `S3_REGION`: S3/MinIO storage settings.
+- `FILE_SCAN_ENABLED`: enables command-based malware scanning before storage and processing.
+- `FILE_SCAN_COMMAND`: scanner command, for example `clamscan --no-summary {path}`.
+- `FILE_SCAN_TIMEOUT_SECONDS`: scanner timeout.
 - `OCR_ENABLED`: enables OCR fallback path once an OCR engine is installed.
 - `OCR_MIN_TEXT_CHARS`: scanned-PDF detection threshold.
 - `CHUNK_SIZE`: LangChain splitter chunk size.
@@ -225,5 +229,5 @@ python -m unittest discover tests
 - Put the API behind HTTPS and tighten `CORS_ORIGINS`.
 - Add structured JSON-mode extraction when using models that guarantee JSON output.
 - Set `RATE_LIMIT_BACKEND=redis` before horizontal scaling.
-- Add file scanning for public deployments.
+- Enable `FILE_SCAN_ENABLED` and configure a scanner before public deployments.
 - Use managed Qdrant/PostgreSQL/Redis or durable volumes with backup policies.

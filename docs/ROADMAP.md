@@ -8,6 +8,7 @@
 - Scoped API keys with optional daily request limits for programmatic access and automation.
 - Standard-library Python CLI client for upload, search, Q&A, and URL ingestion.
 - PDF, TXT, Markdown, and URL ingestion.
+- Command-based antivirus/malware scan hook before document storage and processing.
 - LangChain loaders, text splitting, RAG orchestration, and cited answer generation.
 - Qdrant vector storage with user/document/project filters.
 - PostgreSQL metadata, history, notes, usage, and evaluation records.
@@ -24,6 +25,5 @@
 - Admin panel for user management, failed jobs, and storage usage.
 - Team workspaces with roles and document sharing.
 - OpenTelemetry traces across API, worker, model calls, and Qdrant operations.
-- Antivirus or malware scanning before document processing.
 - Browser-based PDF preview with highlighted cited passages.
 - Team-level API key policies and audit exports.
