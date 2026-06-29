@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Brain, FileText, GitCompareArrows, LogOut, MessageSquareText, RefreshCcw, Search, Trash2, UploadCloud } from "lucide-react";
-import { api, apiUrl, AdminOverview, ApiKeyRecord, changePassword, Citation, createApiKey, DocumentItem, downloadText, EvaluationRecord, LiteratureMatrixRow, login, logout, OperationalStatus, Project, register, ResearchNote, revokeApiKey, SavedQuery, UsageSummary } from "@/lib/api";
+import { api, apiUrl, AdminOverview, ApiKeyRecord, changePassword, Citation, createApiKey, DocumentItem, downloadBlob, downloadText, EvaluationRecord, LiteratureMatrixRow, login, logout, OperationalStatus, Project, register, ResearchNote, revokeApiKey, SavedQuery, UsageSummary } from "@/lib/api";
 import { SourceList } from "@/components/SourceList";
 
 type Mode = "ask" | "search" | "compare";
@@ -51,6 +51,10 @@ export default function Page() {
   const [rewrittenQuery, setRewrittenQuery] = useState("");
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState<Citation[]>([]);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewText, setPreviewText] = useState("");
+  const [previewDocumentId, setPreviewDocumentId] = useState("");
+  const [previewCitation, setPreviewCitation] = useState<Citation | null>(null);
   const [matrixRows, setMatrixRows] = useState<LiteratureMatrixRow[]>([]);
   const [literatureSynthesis, setLiteratureSynthesis] = useState("");
   const [busy, setBusy] = useState(false);
@@ -86,6 +90,12 @@ export default function Page() {
     setEditTitle(current?.title || "");
     setEditTags(current?.tags || "");
   }, [selectedDocument, documents]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   async function loadDocuments() {
     if (!token) return;
@@ -131,6 +141,31 @@ export default function Page() {
       setMatrixRows(rows);
     } catch {
       setMatrixRows([]);
+    }
+  }
+
+  async function openPreview(documentId: string, citation: Citation | null = null) {
+    if (!token) return;
+    const document = documents.find((doc) => doc.id === documentId);
+    if (!document) return;
+    setBusy(true);
+    setError("");
+    setPreviewCitation(citation);
+    try {
+      const blob = await downloadBlob(`/documents/${documentId}/file`, token);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewDocumentId(documentId);
+      if (document.document_type === "pdf") {
+        setPreviewText("");
+        setPreviewUrl(URL.createObjectURL(blob));
+      } else {
+        setPreviewUrl("");
+        setPreviewText(await blob.text());
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Preview failed");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -763,6 +798,9 @@ export default function Page() {
                         <button title="Reprocess document" className="focus-ring rounded-md border border-stone-300 p-2 text-stone-700" onClick={() => reprocessDocument(doc.id)} disabled={busy}>
                           <RefreshCcw size={15} />
                         </button>
+                        <button title="Preview source" className="focus-ring rounded-md border border-stone-300 px-2 py-1 text-xs font-bold text-ink" onClick={() => openPreview(doc.id)} disabled={busy}>
+                          Preview
+                        </button>
                         <button title="Extract research profile" className="focus-ring rounded-md border border-stone-300 px-2 py-1 text-xs font-bold text-teal" onClick={() => extractResearch(doc.id)} disabled={busy || doc.status !== "ready"}>
                           Extract
                         </button>
@@ -1030,7 +1068,32 @@ export default function Page() {
             </section>
           ) : null}
 
-          <SourceList sources={sources} />
+          {(previewUrl || previewText || previewCitation) ? (
+            <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-soft">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-black">Source Preview</h2>
+                <button className="focus-ring rounded-lg border border-stone-300 px-3 py-2 text-sm font-bold" onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(""); setPreviewText(""); setPreviewCitation(null); setPreviewDocumentId(""); }}>
+                  Close
+                </button>
+              </div>
+              {previewCitation ? (
+                <div className="mt-4 rounded-lg border border-teal/30 bg-teal/10 p-4">
+                  <div className="text-xs font-bold uppercase text-teal">Highlighted citation</div>
+                  <div className="mt-1 text-sm font-semibold text-ink">{previewCitation.filename}{previewCitation.page ? ` / page ${previewCitation.page}` : ""}</div>
+                  <p className="mt-2 text-sm leading-6 text-stone-700">{previewCitation.excerpt}</p>
+                </div>
+              ) : null}
+              {previewUrl ? (
+                <iframe className="mt-4 h-[680px] w-full rounded-lg border border-stone-200" src={previewUrl} title="Document preview" />
+              ) : null}
+              {previewText ? (
+                <pre className="mt-4 max-h-[680px] overflow-auto rounded-lg bg-stone-950 p-4 text-xs leading-5 text-white">{previewText}</pre>
+              ) : null}
+              {!previewUrl && !previewText && previewDocumentId ? <p className="mt-4 text-sm text-stone-500">Preview unavailable for this source.</p> : null}
+            </section>
+          ) : null}
+
+          <SourceList sources={sources} onPreview={(source) => openPreview(source.document_id, source)} />
         </section>
       </div>
     </main>

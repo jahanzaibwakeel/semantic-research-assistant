@@ -54,6 +54,7 @@ flowchart LR
 - Qdrant stores embedding vectors and chunk payloads.
 - Redis powers Celery background jobs and can back distributed rate limiting.
 - Local disk or S3/MinIO stores uploaded source files.
+- The preview endpoint streams owned source files back to the dashboard for browser PDF/text preview and citation review.
 
 ## Production Concerns
 

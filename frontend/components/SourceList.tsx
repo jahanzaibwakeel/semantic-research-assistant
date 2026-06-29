@@ -1,7 +1,7 @@
 import { BookOpen } from "lucide-react";
 import type { Citation } from "@/lib/api";
 
-export function SourceList({ sources }: { sources: Citation[] }) {
+export function SourceList({ sources, onPreview }: { sources: Citation[]; onPreview?: (source: Citation) => void }) {
   if (!sources.length) return null;
   return (
     <div className="space-y-3">
@@ -16,6 +16,11 @@ export function SourceList({ sources }: { sources: Citation[] }) {
             {source.retrieval_method} relevance {source.score ? source.score.toFixed(2) : "n/a"}
           </div>
           <p className="mt-2 text-sm leading-6 text-stone-700">{source.excerpt}</p>
+          {onPreview ? (
+            <button className="focus-ring mt-3 rounded-lg border border-stone-300 px-3 py-2 text-xs font-bold text-ink" onClick={() => onPreview(source)}>
+              Preview passage
+            </button>
+          ) : null}
         </div>
       ))}
     </div>

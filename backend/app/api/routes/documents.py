@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -154,6 +155,33 @@ def get_document(
     if document.status == "deleted":
         raise HTTPException(status_code=404, detail="Document not found")
     return document
+
+
+@router.get("/{document_id}/file")
+def preview_document_file(
+    document_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    document = _owned_document(db, document_id, user.id)
+    if not _storage_exists(document):
+        raise HTTPException(status_code=409, detail="Original file is not available")
+    suffix = Path(document.filename).suffix or f".{document.document_type}"
+    local_path = StorageService().download_to_path(
+        document.storage_path,
+        Path("storage/cache/preview") / str(user.id) / f"{document.id}{suffix}",
+    )
+    media_type = {
+        "pdf": "application/pdf",
+        "markdown": "text/markdown; charset=utf-8",
+        "text": "text/plain; charset=utf-8",
+    }.get(document.document_type, "application/octet-stream")
+    return FileResponse(
+        path=local_path,
+        media_type=media_type,
+        filename=document.filename,
+        headers={"Content-Disposition": f'inline; filename="{document.filename}"'},
+    )
 
 
 @router.patch("/{document_id}", response_model=DocumentRead)

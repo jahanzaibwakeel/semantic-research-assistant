@@ -9,6 +9,7 @@
 - Scoped API keys with optional daily request limits for programmatic access and automation.
 - Standard-library Python CLI client for upload, search, Q&A, and URL ingestion.
 - PDF, TXT, Markdown, and URL ingestion.
+- Browser-based source preview for PDFs, text, Markdown, and cited passages.
 - Command-based antivirus/malware scan hook before document storage and processing.
 - LangChain loaders, text splitting, RAG orchestration, and cited answer generation.
 - Qdrant vector storage with user/document/project filters.
@@ -25,5 +26,4 @@
 
 - Full OCR pipeline with Tesseract or a managed OCR provider.
 - Team workspaces with roles and document sharing.
-- Browser-based PDF preview with highlighted cited passages.
 - Team-level API key policies and audit exports.

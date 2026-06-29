@@ -41,6 +41,7 @@ Deeper docs:
 - BibTeX bibliography export.
 - Optional S3-compatible object storage with MinIO in Docker Compose.
 - Streaming Q&A endpoint and frontend streaming button.
+- Browser-based source preview for PDFs, text, and Markdown with highlighted citation excerpts.
 - Scanned-PDF detection hook for OCR workflows.
 - PDF, TXT, Markdown, and URL ingestion with metadata tracking.
 - LangChain `PyPDFLoader` text extraction.
@@ -213,6 +214,7 @@ python -m unittest discover tests
 - `POST /api/documents/url`
 - `GET /api/documents`
 - `GET /api/documents/{document_id}`
+- `GET /api/documents/{document_id}/file`
 - `PATCH /api/documents/{document_id}`
 - `POST /api/documents/{document_id}/reprocess`
 - `POST /api/documents/{document_id}/restore`

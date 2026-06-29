@@ -219,6 +219,14 @@ export async function downloadText(path: string, token: string | null): Promise<
   return response.text();
 }
 
+export async function downloadBlob(path: string, token: string | null): Promise<Blob> {
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(`${API_URL}${path}`, { headers });
+  if (!response.ok) throw new Error(await response.text());
+  return response.blob();
+}
+
 export function apiUrl(path: string): string {
   return `${API_URL}${path}`;
 }
