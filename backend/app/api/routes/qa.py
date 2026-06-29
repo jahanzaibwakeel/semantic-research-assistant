@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.entities import Document, User
 from app.schemas.dto import AnswerResponse, CompareRequest, QuestionRequest
 from app.services.ai import get_llm
+from app.services.access import get_accessible_document
 from app.services.rag import answer_question, compare_documents, retrieve_question_context
 
 router = APIRouter(prefix="/qa", tags=["qa"])
@@ -18,6 +19,12 @@ router = APIRouter(prefix="/qa", tags=["qa"])
 
 @router.post("/ask", response_model=AnswerResponse)
 def ask(payload: QuestionRequest, user: Annotated[User, Depends(get_current_user)], db: Annotated[Session, Depends(get_db)]):
+    retrieval_owner_id = user.id
+    if payload.document_id:
+        document = get_accessible_document(db, user.id, payload.document_id, ready_only=True)
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        retrieval_owner_id = document.owner_id
     answer, sources, rewritten_query = answer_question(
         db,
         user.id,
@@ -30,12 +37,19 @@ def ask(payload: QuestionRequest, user: Annotated[User, Depends(get_current_user
         payload.project_id,
         payload.document_type,
         payload.tags,
+        retrieval_owner_id,
     )
     return AnswerResponse(answer=answer, sources=sources, rewritten_query=rewritten_query)
 
 
 @router.post("/ask/stream")
-def ask_stream(payload: QuestionRequest, user: Annotated[User, Depends(get_current_user)]):
+def ask_stream(payload: QuestionRequest, user: Annotated[User, Depends(get_current_user)], db: Annotated[Session, Depends(get_db)]):
+    retrieval_owner_id = user.id
+    if payload.document_id:
+        document = get_accessible_document(db, user.id, payload.document_id, ready_only=True)
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        retrieval_owner_id = document.owner_id
     retrieval_query, sources, context = retrieve_question_context(
         user.id,
         payload.question,
@@ -47,6 +61,7 @@ def ask_stream(payload: QuestionRequest, user: Annotated[User, Depends(get_curre
         payload.project_id,
         payload.document_type,
         payload.tags,
+        retrieval_owner_id,
     )
 
     def events():
@@ -71,16 +86,14 @@ def ask_stream(payload: QuestionRequest, user: Annotated[User, Depends(get_curre
 
 @router.post("/compare", response_model=AnswerResponse)
 def compare(payload: CompareRequest, user: Annotated[User, Depends(get_current_user)], db: Annotated[Session, Depends(get_db)]):
-    left = _owned_document(db, payload.left_document_id, user.id)
-    right = _owned_document(db, payload.right_document_id, user.id)
+    left = _accessible_ready_document(db, payload.left_document_id, user.id)
+    right = _accessible_ready_document(db, payload.right_document_id, user.id)
     answer, sources, rewritten_query = compare_documents(db, user.id, left, right, payload.focus or "claims, methods, limitations, findings")
     return AnswerResponse(answer=answer, sources=sources, rewritten_query=rewritten_query)
 
 
-def _owned_document(db: Session, document_id: uuid.UUID, user_id: uuid.UUID) -> Document:
-    document = db.get(Document, document_id)
-    if not document or document.owner_id != user_id:
+def _accessible_ready_document(db: Session, document_id: uuid.UUID, user_id: uuid.UUID) -> Document:
+    document = get_accessible_document(db, user_id, document_id, ready_only=True)
+    if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    if document.status != "ready":
-        raise HTTPException(status_code=409, detail="Document is not ready")
     return document

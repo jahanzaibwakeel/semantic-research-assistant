@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     file_scan_timeout_seconds: int = 30
     ocr_enabled: bool = False
     ocr_min_text_chars: int = 200
+    ocr_command: str | None = None
+    ocr_language: str = "eng"
+    ocr_timeout_seconds: int = 120
     chunk_size: int = 1200
     chunk_overlap: int = 180
     keyword_candidate_limit: int = 80
@@ -100,6 +103,10 @@ class Settings(BaseSettings):
             raise ValueError("FILE_SCAN_COMMAND must be set when FILE_SCAN_ENABLED is true")
         if self.file_scan_timeout_seconds <= 0:
             raise ValueError("FILE_SCAN_TIMEOUT_SECONDS must be greater than zero")
+        if self.ocr_enabled and not self.ocr_command:
+            raise ValueError("OCR_COMMAND must be set when OCR_ENABLED is true")
+        if self.ocr_timeout_seconds <= 0:
+            raise ValueError("OCR_TIMEOUT_SECONDS must be greater than zero")
         return self
 
 

@@ -46,11 +46,12 @@ def semantic_search(
     project_id: uuid.UUID | None = None,
     document_type: str | None = None,
     tags: str | None = None,
+    retrieval_owner_id: uuid.UUID | None = None,
 ):
     retrieval_query = rewrite_query(query) if rewrite else query
     results = retrieve_chunks(
         query=retrieval_query,
-        owner_id=owner_id,
+        owner_id=retrieval_owner_id or owner_id,
         document_id=document_id,
         project_id=project_id,
         document_type=document_type,
@@ -85,11 +86,12 @@ def answer_question(
     project_id: uuid.UUID | None = None,
     document_type: str | None = None,
     tags: str | None = None,
+    retrieval_owner_id: uuid.UUID | None = None,
 ):
     retrieval_query = rewrite_query(question) if rewrite else question
     results = retrieve_chunks(
         query=retrieval_query,
-        owner_id=owner_id,
+        owner_id=retrieval_owner_id or owner_id,
         document_id=document_id,
         project_id=project_id,
         document_type=document_type,
@@ -140,11 +142,12 @@ def retrieve_question_context(
     project_id: uuid.UUID | None = None,
     document_type: str | None = None,
     tags: str | None = None,
+    retrieval_owner_id: uuid.UUID | None = None,
 ):
     retrieval_query = rewrite_query(question) if rewrite else question
     results = retrieve_chunks(
         query=retrieval_query,
-        owner_id=owner_id,
+        owner_id=retrieval_owner_id or owner_id,
         document_id=document_id,
         project_id=project_id,
         document_type=document_type,
@@ -181,8 +184,8 @@ def summarize_document(db: Session, owner_id: uuid.UUID, document: Document) -> 
 
 def compare_documents(db: Session, owner_id: uuid.UUID, left: Document, right: Document, focus: str):
     retrieval_query = rewrite_query(focus)
-    left_results = retrieve_chunks(retrieval_query, owner_id, left.id, limit=8, mode="hybrid")
-    right_results = retrieve_chunks(retrieval_query, owner_id, right.id, limit=8, mode="hybrid")
+    left_results = retrieve_chunks(retrieval_query, left.owner_id, left.id, limit=8, mode="hybrid")
+    right_results = retrieve_chunks(retrieval_query, right.owner_id, right.id, limit=8, mode="hybrid")
     citations = _citations(left_results) + _citations(right_results)
     if not citations:
         answer = "I could not find enough relevant context in either document to compare them confidently."

@@ -66,6 +66,11 @@ class ApiKeyScopeTests(unittest.TestCase):
 
         self.assertIsNone(_required_scope(request))
 
+    def test_required_scope_maps_team_policy_to_write(self):
+        request = SimpleNamespace(url=SimpleNamespace(path="/api/teams/abc/policy"), method="PATCH")
+
+        self.assertEqual(_required_scope(request), "teams:write")
+
     def test_daily_quota_rejects_exhausted_key(self):
         key = ApiKey(daily_request_limit=1, requests_today=1, quota_reset_at=datetime.now(timezone.utc))
 

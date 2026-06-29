@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -13,6 +13,7 @@ from app.core.config import Settings, get_settings
 from app.db.session import get_db
 from app.models.entities import Document, EvaluationRecord, InteractionHistory, Project, ResearchExtraction, ResearchNote, UsageRecord, User
 from app.schemas.dto import BulkDocumentAction, DocumentRead, DocumentUpdate, UrlIngestRequest
+from app.services.access import get_accessible_document, shared_document_ids
 from app.services.qdrant_store import QdrantStore
 from app.services.storage import StorageService
 from app.services.uploads import persist_upload, scan_file
@@ -29,7 +30,11 @@ def list_documents(
     project_id: uuid.UUID | None = None,
     include_deleted: bool = False,
 ):
-    filters = [Document.owner_id == user.id]
+    shared_ids = shared_document_ids(db, user.id)
+    access_filter = Document.owner_id == user.id
+    if shared_ids:
+        access_filter = or_(access_filter, Document.id.in_(shared_ids))
+    filters = [access_filter]
     if not include_deleted:
         filters.append(Document.status != "deleted")
     if project_id:
@@ -149,10 +154,8 @@ def get_document(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    document = db.get(Document, document_id)
-    if not document or document.owner_id != user.id:
-        raise HTTPException(status_code=404, detail="Document not found")
-    if document.status == "deleted":
+    document = get_accessible_document(db, user.id, document_id)
+    if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     return document
 
@@ -163,7 +166,9 @@ def preview_document_file(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    document = _owned_document(db, document_id, user.id)
+    document = get_accessible_document(db, user.id, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
     if not _storage_exists(document):
         raise HTTPException(status_code=409, detail="Original file is not available")
     suffix = Path(document.filename).suffix or f".{document.document_type}"

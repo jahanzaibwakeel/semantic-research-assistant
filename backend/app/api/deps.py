@@ -24,6 +24,8 @@ ALL_API_KEY_SCOPES = [
     "research:write",
     "projects:read",
     "projects:write",
+    "teams:read",
+    "teams:write",
     "exports:read",
     "history:read",
     "ops:read",
@@ -115,6 +117,8 @@ def _required_scope(request: Request) -> str | None:
         return "research:write" if method == "POST" else "research:read"
     if path.startswith("/api/projects"):
         return "projects:write" if method in {"POST", "PATCH", "DELETE"} else "projects:read"
+    if path.startswith("/api/teams"):
+        return "teams:write" if method in {"POST", "PATCH", "DELETE"} else "teams:read"
     if path.startswith("/api/exports"):
         return "exports:read"
     if path.startswith("/api/history"):

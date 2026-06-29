@@ -1,6 +1,7 @@
 from app.models.entities import (
     ApiKey,
     Document,
+    DocumentShare,
     EvaluationRecord,
     InteractionHistory,
     Project,
@@ -8,6 +9,8 @@ from app.models.entities import (
     ResearchExtraction,
     ResearchNote,
     SavedQuery,
+    Team,
+    TeamMember,
     UsageRecord,
     User,
 )
@@ -15,6 +18,7 @@ from app.models.entities import (
 __all__ = [
     "ApiKey",
     "Document",
+    "DocumentShare",
     "EvaluationRecord",
     "InteractionHistory",
     "Project",
@@ -22,6 +26,8 @@ __all__ = [
     "ResearchExtraction",
     "ResearchNote",
     "SavedQuery",
+    "Team",
+    "TeamMember",
     "UsageRecord",
     "User",
 ]

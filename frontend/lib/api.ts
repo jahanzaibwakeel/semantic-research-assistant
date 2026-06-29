@@ -27,6 +27,25 @@ export type Project = {
   updated_at: string;
 };
 
+export type Team = {
+  id: string;
+  name: string;
+  description: string | null;
+  allowed_api_scopes: string;
+  api_key_daily_limit: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TeamMember = {
+  id: string;
+  team_id: string;
+  user_id: string;
+  email: string;
+  role: string;
+  created_at: string;
+};
+
 export type SavedQuery = {
   id: string;
   title: string;
@@ -67,6 +86,7 @@ export type EvaluationRecord = {
 
 export type ApiKeyRecord = {
   id: string;
+  team_id: string | null;
   name: string;
   key_prefix: string;
   scopes: string;
@@ -200,10 +220,10 @@ export async function changePassword(token: string, currentPassword: string, new
   });
 }
 
-export async function createApiKey(token: string, name: string, scopes: string[] = ["*"], dailyRequestLimit: number | null = null) {
+export async function createApiKey(token: string, name: string, scopes: string[] = ["*"], dailyRequestLimit: number | null = null, teamId: string | null = null) {
   return api<ApiKeyCreated>("/auth/api-keys", token, {
     method: "POST",
-    body: JSON.stringify({ name, scopes, daily_request_limit: dailyRequestLimit })
+    body: JSON.stringify({ name, scopes, daily_request_limit: dailyRequestLimit, team_id: teamId })
   });
 }
 

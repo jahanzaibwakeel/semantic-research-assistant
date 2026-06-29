@@ -58,10 +58,12 @@ class ApiKeyCreate(BaseModel):
     name: str
     scopes: list[str] = Field(default_factory=lambda: ["*"])
     daily_request_limit: int | None = None
+    team_id: uuid.UUID | None = None
 
 
 class ApiKeyRead(BaseModel):
     id: uuid.UUID
+    team_id: uuid.UUID | None
     name: str
     key_prefix: str
     scopes: str
@@ -121,6 +123,59 @@ class ProjectRead(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TeamCreate(BaseModel):
+    name: str
+    description: str | None = None
+    allowed_api_scopes: str = "*"
+    api_key_daily_limit: int | None = None
+
+
+class TeamPolicyUpdate(BaseModel):
+    allowed_api_scopes: str = "*"
+    api_key_daily_limit: int | None = None
+
+
+class TeamRead(BaseModel):
+    id: uuid.UUID
+    name: str
+    description: str | None
+    allowed_api_scopes: str
+    api_key_daily_limit: int | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class TeamMemberInvite(BaseModel):
+    email: EmailStr
+    role: str = "member"
+
+
+class TeamMemberRead(BaseModel):
+    id: uuid.UUID
+    team_id: uuid.UUID
+    user_id: uuid.UUID
+    email: EmailStr
+    role: str
+    created_at: datetime
+
+
+class DocumentShareCreate(BaseModel):
+    document_id: uuid.UUID
+    permission: str = "read"
+
+
+class DocumentShareRead(BaseModel):
+    id: uuid.UUID
+    team_id: uuid.UUID
+    document_id: uuid.UUID
+    filename: str
+    title: str | None
+    permission: str
+    created_at: datetime
 
 
 class SavedQueryCreate(BaseModel):

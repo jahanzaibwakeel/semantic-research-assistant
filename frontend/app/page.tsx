@@ -1,12 +1,12 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Brain, FileText, GitCompareArrows, LogOut, MessageSquareText, RefreshCcw, Search, Trash2, UploadCloud } from "lucide-react";
-import { api, apiUrl, AdminOverview, ApiKeyRecord, changePassword, Citation, createApiKey, DocumentItem, downloadBlob, downloadText, EvaluationRecord, LiteratureMatrixRow, login, logout, OperationalStatus, Project, register, ResearchNote, revokeApiKey, SavedQuery, UsageSummary } from "@/lib/api";
+import { Brain, FileText, GitCompareArrows, LogOut, MessageSquareText, RefreshCcw, Search, Trash2, UploadCloud, Users } from "lucide-react";
+import { api, apiUrl, AdminOverview, ApiKeyRecord, changePassword, Citation, createApiKey, DocumentItem, downloadBlob, downloadText, EvaluationRecord, LiteratureMatrixRow, login, logout, OperationalStatus, Project, register, ResearchNote, revokeApiKey, SavedQuery, Team, TeamMember, UsageSummary } from "@/lib/api";
 import { SourceList } from "@/components/SourceList";
 
 type Mode = "ask" | "search" | "compare";
-const API_KEY_SCOPES = ["*", "documents:read", "documents:write", "search:read", "qa:read", "research:read", "research:write", "projects:read", "projects:write", "exports:read", "history:read", "ops:read", "profile:read"];
+const API_KEY_SCOPES = ["*", "documents:read", "documents:write", "search:read", "qa:read", "research:read", "research:write", "projects:read", "projects:write", "teams:read", "teams:write", "exports:read", "history:read", "ops:read", "profile:read"];
 
 export default function Page() {
   const [token, setToken] = useState<string | null>(null);
@@ -18,6 +18,8 @@ export default function Page() {
   const [authMode, setAuthMode] = useState<"login" | "register">("register");
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
   const [notes, setNotes] = useState<ResearchNote[]>([]);
   const [usage, setUsage] = useState<UsageSummary[]>([]);
@@ -27,6 +29,12 @@ export default function Page() {
   const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
   const [exportPreview, setExportPreview] = useState("");
   const [projectName, setProjectName] = useState("Reading List");
+  const [teamName, setTeamName] = useState("Research Team");
+  const [selectedTeam, setSelectedTeam] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState("member");
+  const [teamScopes, setTeamScopes] = useState("*");
+  const [teamDailyLimit, setTeamDailyLimit] = useState("");
   const [uploadTags, setUploadTags] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [apiKeyName, setApiKeyName] = useState("Research CLI");
@@ -86,6 +94,17 @@ export default function Page() {
   }, [selectedProject, includeDeleted]);
 
   useEffect(() => {
+    if (!token || !selectedTeam) {
+      setTeamMembers([]);
+      return;
+    }
+    const team = teams.find((item) => item.id === selectedTeam);
+    setTeamScopes(team?.allowed_api_scopes || "*");
+    setTeamDailyLimit(team?.api_key_daily_limit ? String(team.api_key_daily_limit) : "");
+    void loadTeamMembers(selectedTeam);
+  }, [token, selectedTeam, teams]);
+
+  useEffect(() => {
     const current = documents.find((doc) => doc.id === selectedDocument);
     setEditTitle(current?.title || "");
     setEditTags(current?.tags || "");
@@ -110,12 +129,15 @@ export default function Page() {
 
   async function loadWorkspace() {
     if (!token) return;
-    const [projectItems, savedItems, noteItems] = await Promise.all([
+    const [projectItems, teamItems, savedItems, noteItems] = await Promise.all([
       api<Project[]>("/projects", token),
+      api<Team[]>("/teams", token),
       api<SavedQuery[]>("/projects/saved-queries", token),
       api<ResearchNote[]>("/projects/notes", token)
     ]);
     setProjects(projectItems);
+    setTeams(teamItems);
+    if (!selectedTeam && teamItems[0]) setSelectedTeam(teamItems[0].id);
     setSavedQueries(savedItems);
     setNotes(noteItems);
     const [usageItems, evaluationItems, apiKeyItems] = await Promise.all([
@@ -131,6 +153,15 @@ export default function Page() {
       setAdminOverview(await api<AdminOverview>("/admin/overview", token));
     } catch {
       setAdminOverview(null);
+    }
+  }
+
+  async function loadTeamMembers(teamId: string) {
+    if (!token) return;
+    try {
+      setTeamMembers(await api<TeamMember[]>(`/teams/${teamId}/members`, token));
+    } catch {
+      setTeamMembers([]);
     }
   }
 
@@ -227,7 +258,7 @@ export default function Page() {
     setAccountMessage("");
     try {
       const dailyLimit = apiKeyDailyLimit.trim() ? Number(apiKeyDailyLimit) : null;
-      const created = await createApiKey(token, apiKeyName.trim(), apiKeyScopes, dailyLimit);
+      const created = await createApiKey(token, apiKeyName.trim(), apiKeyScopes, dailyLimit, selectedTeam || null);
       setNewApiKey(created.api_key);
       setApiKeyName("");
       setApiKeyScopes(["*"]);
@@ -264,6 +295,99 @@ export default function Page() {
       await loadWorkspace();
     } catch (err) {
       setError(err instanceof Error ? err.message : "API key revoke failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createTeam(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !teamName.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      const team = await api<Team>("/teams", token, {
+        method: "POST",
+        body: JSON.stringify({ name: teamName.trim(), allowed_api_scopes: teamScopes || "*", api_key_daily_limit: teamDailyLimit ? Number(teamDailyLimit) : null })
+      });
+      setTeamName("");
+      setSelectedTeam(team.id);
+      await loadWorkspace();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Team creation failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addTeamMember(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !selectedTeam || !memberEmail.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api<TeamMember>(`/teams/${selectedTeam}/members`, token, {
+        method: "POST",
+        body: JSON.stringify({ email: memberEmail.trim(), role: memberRole })
+      });
+      setMemberEmail("");
+      await loadTeamMembers(selectedTeam);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Member update failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function shareSelectedDocument() {
+    if (!token || !selectedTeam || !selectedDocument) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/teams/${selectedTeam}/documents`, token, {
+        method: "POST",
+        body: JSON.stringify({ document_id: selectedDocument, permission: "read" })
+      });
+      await loadDocuments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Document sharing failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveTeamPolicy() {
+    if (!token || !selectedTeam) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api<Team>(`/teams/${selectedTeam}/policy`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ allowed_api_scopes: teamScopes || "*", api_key_daily_limit: teamDailyLimit ? Number(teamDailyLimit) : null })
+      });
+      await loadWorkspace();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Team policy update failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function downloadTeamAudit() {
+    if (!token || !selectedTeam) return;
+    setBusy(true);
+    setError("");
+    try {
+      const csv = await downloadText(`/teams/${selectedTeam}/audit.csv`, token);
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "team-audit.csv";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Audit export failed");
     } finally {
       setBusy(false);
     }
@@ -709,12 +833,59 @@ export default function Page() {
           </form>
 
           <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-soft">
+            <div className="flex items-center gap-2 font-bold"><Users size={19} /> Teams</div>
+            <form onSubmit={createTeam} className="mt-4 flex gap-2">
+              <input className="focus-ring min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" placeholder="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} />
+              <button className="focus-ring rounded-lg bg-ink px-3 py-2 text-sm font-bold text-white" disabled={busy || !teamName.trim()}>Create</button>
+            </form>
+            <select className="focus-ring mt-3 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" value={selectedTeam} onChange={(event) => setSelectedTeam(event.target.value)}>
+              <option value="">No team selected</option>
+              {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+            </select>
+            {selectedTeam ? (
+              <div className="mt-4 space-y-3">
+                <form onSubmit={addTeamMember} className="space-y-2">
+                  <input className="focus-ring w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" placeholder="teammate@example.com" value={memberEmail} onChange={(event) => setMemberEmail(event.target.value)} />
+                  <div className="flex gap-2">
+                    <select className="focus-ring min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" value={memberRole} onChange={(event) => setMemberRole(event.target.value)}>
+                      <option value="member">Member</option>
+                      <option value="viewer">Viewer</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button className="focus-ring rounded-lg border border-stone-300 px-3 py-2 text-sm font-bold" disabled={busy || !memberEmail.trim()}>Add</button>
+                  </div>
+                </form>
+                <div className="space-y-1">
+                  {teamMembers.slice(0, 4).map((member) => (
+                    <div key={member.id} className="flex justify-between gap-2 text-xs text-stone-600">
+                      <span className="truncate">{member.email}</span>
+                      <span className="font-semibold">{member.role}</span>
+                    </div>
+                  ))}
+                  {!teamMembers.length ? <p className="text-xs text-stone-500">No members loaded.</p> : null}
+                </div>
+                <input className="focus-ring w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" placeholder="allowed scopes: * or search:read,qa:read" value={teamScopes} onChange={(event) => setTeamScopes(event.target.value)} />
+                <input className="focus-ring w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" type="number" min="1" placeholder="team key daily cap" value={teamDailyLimit} onChange={(event) => setTeamDailyLimit(event.target.value)} />
+                <div className="grid grid-cols-3 gap-2">
+                  <button type="button" className="focus-ring rounded-lg border border-stone-300 px-2 py-2 text-xs font-bold" onClick={saveTeamPolicy} disabled={busy}>Policy</button>
+                  <button type="button" className="focus-ring rounded-lg border border-stone-300 px-2 py-2 text-xs font-bold" onClick={shareSelectedDocument} disabled={busy || !selectedDocument}>Share</button>
+                  <button type="button" className="focus-ring rounded-lg border border-stone-300 px-2 py-2 text-xs font-bold" onClick={downloadTeamAudit} disabled={busy}>Audit</button>
+                </div>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-soft">
             <div className="font-bold">API Keys</div>
             <form onSubmit={submitApiKey} className="mt-4 space-y-3">
               <div className="flex gap-2">
                 <input className="focus-ring min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" placeholder="Key name" value={apiKeyName} onChange={(event) => setApiKeyName(event.target.value)} />
                 <button className="focus-ring rounded-lg bg-ink px-3 py-2 text-sm font-bold text-white" disabled={busy || !apiKeyName.trim()}>Create</button>
               </div>
+              <select className="focus-ring w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" value={selectedTeam} onChange={(event) => setSelectedTeam(event.target.value)}>
+                <option value="">Personal key</option>
+                {teams.map((team) => <option key={team.id} value={team.id}>Team key: {team.name}</option>)}
+              </select>
               <input className="focus-ring w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" type="number" min="1" placeholder="daily request limit" value={apiKeyDailyLimit} onChange={(event) => setApiKeyDailyLimit(event.target.value)} />
               <div className="flex flex-wrap gap-2">
                 {API_KEY_SCOPES.map((scope) => (
@@ -739,6 +910,7 @@ export default function Page() {
                     <div className="min-w-0">
                       <div className="truncate text-sm font-bold">{key.name}</div>
                       <div className="mt-1 text-xs text-stone-500">{key.key_prefix}... / {key.revoked ? "revoked" : "active"}</div>
+                      {key.team_id ? <div className="mt-1 text-xs text-stone-500">team-bound</div> : null}
                       <div className="mt-1 text-xs text-stone-500">{key.scopes}</div>
                       <div className="mt-1 text-xs text-stone-500">{key.daily_request_limit ? `${key.requests_today}/${key.daily_request_limit} today` : `${key.requests_today} requests today`}</div>
                     </div>

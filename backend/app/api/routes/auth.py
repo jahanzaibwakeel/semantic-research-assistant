@@ -11,7 +11,7 @@ from app.api.deps import ALL_API_KEY_SCOPES, get_current_user
 from app.core.config import get_settings
 from app.core.security import create_access_token, create_refresh_token, hash_password, hash_token, verify_password
 from app.db.session import get_db
-from app.models.entities import ApiKey, RefreshToken, User
+from app.models.entities import ApiKey, RefreshToken, Team, TeamMember, User
 from app.schemas.dto import ApiKeyCreate, ApiKeyCreated, ApiKeyRead, LogoutRequest, PasswordChangeRequest, RefreshTokenRequest, Token, UserCreate, UserRead
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -113,9 +113,13 @@ def create_api_key(
     scopes = _normalize_api_key_scopes(payload.scopes)
     if payload.daily_request_limit is not None and payload.daily_request_limit <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Daily request limit must be greater than zero")
+    if payload.team_id:
+        team = _manageable_team(db, payload.team_id, user.id)
+        _enforce_team_api_key_policy(team, scopes, payload.daily_request_limit)
     api_key_value = f"sra_{create_refresh_token()}"
     api_key = ApiKey(
         owner_id=user.id,
+        team_id=payload.team_id,
         name=name[:255],
         key_hash=hash_token(api_key_value),
         key_prefix=api_key_value[:12],
@@ -159,6 +163,30 @@ def _normalize_api_key_scopes(scopes: list[str]) -> str:
     if invalid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid API key scopes: {', '.join(invalid)}")
     return ",".join(cleaned)
+
+
+def _manageable_team(db: Session, team_id: uuid.UUID, user_id: uuid.UUID) -> Team:
+    team = db.get(Team, team_id)
+    membership = db.scalar(
+        select(TeamMember).where(
+            TeamMember.team_id == team_id,
+            TeamMember.user_id == user_id,
+            TeamMember.role.in_(["owner", "admin"]),
+        )
+    )
+    if not team or not membership:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+    return team
+
+
+def _enforce_team_api_key_policy(team: Team, scopes: str, daily_request_limit: int | None) -> None:
+    allowed = {scope.strip() for scope in (team.allowed_api_scopes or "*").split(",") if scope.strip()}
+    requested = {scope.strip() for scope in scopes.split(",") if scope.strip()}
+    if "*" not in allowed and ("*" in requested or not requested.issubset(allowed)):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="API key scopes exceed team policy")
+    if team.api_key_daily_limit is not None:
+        if daily_request_limit is None or daily_request_limit > team.api_key_daily_limit:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="API key daily limit exceeds team policy")
 
 
 def _issue_tokens(db: Session, user: User) -> Token:

@@ -28,10 +28,12 @@ Deeper docs:
 - Refresh-token rotation for longer-lived sessions.
 - Logout, logout-all, and password change flows with refresh-token revocation.
 - Scoped API keys with optional daily request limits for programmatic ingestion, search, Q&A, exports, and automation.
+- Team-bound API keys with team policy caps for allowed scopes and daily usage.
 - Standard-library Python CLI example for API-key workflows.
 - Memory or Redis-backed per-IP rate limiting for API abuse protection.
 - Security response headers for production browser hardening.
 - Project workspaces for grouping documents and research notes.
+- Team workspaces with owner/admin/member/viewer roles, shared documents, and CSV audit exports.
 - Admin operations panel for configured admins with user, failed-job, and storage visibility.
 - Saved queries and pinned research notes.
 - Usage tracking with estimated token counts by operation.
@@ -42,7 +44,7 @@ Deeper docs:
 - Optional S3-compatible object storage with MinIO in Docker Compose.
 - Streaming Q&A endpoint and frontend streaming button.
 - Browser-based source preview for PDFs, text, and Markdown with highlighted citation excerpts.
-- Scanned-PDF detection hook for OCR workflows.
+- Command-based OCR fallback for scanned PDFs, including Tesseract-compatible configuration.
 - PDF, TXT, Markdown, and URL ingestion with metadata tracking.
 - LangChain `PyPDFLoader` text extraction.
 - Plain-text and Markdown document ingestion.
@@ -176,6 +178,9 @@ python -m unittest discover tests
 - `FILE_SCAN_TIMEOUT_SECONDS`: scanner timeout.
 - `OCR_ENABLED`: enables OCR fallback path once an OCR engine is installed.
 - `OCR_MIN_TEXT_CHARS`: scanned-PDF detection threshold.
+- `OCR_COMMAND`: OCR command template. Use `{path}` for the source file and `{language}` for the OCR language, for example `tesseract {path} stdout -l {language}`.
+- `OCR_LANGUAGE`: OCR language passed into the command template.
+- `OCR_TIMEOUT_SECONDS`: OCR command timeout.
 - `CHUNK_SIZE`: LangChain splitter chunk size.
 - `CHUNK_OVERLAP`: LangChain splitter overlap.
 - `KEYWORD_CANDIDATE_LIMIT`: number of Qdrant payload chunks scanned for keyword retrieval.
@@ -203,6 +208,15 @@ python -m unittest discover tests
 - `POST /api/projects/saved-queries`
 - `GET /api/projects/notes`
 - `POST /api/projects/notes`
+- `GET /api/teams`
+- `POST /api/teams`
+- `PATCH /api/teams/{team_id}/policy`
+- `GET /api/teams/{team_id}/members`
+- `POST /api/teams/{team_id}/members`
+- `GET /api/teams/{team_id}/documents`
+- `POST /api/teams/{team_id}/documents`
+- `DELETE /api/teams/{team_id}/documents/{document_id}`
+- `GET /api/teams/{team_id}/audit.csv`
 - `GET /api/exports/report.md`
 - `GET /api/exports/bibliography.bib`
 - `GET /api/exports/manifest.json`

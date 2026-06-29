@@ -21,9 +21,12 @@
 - Docker Compose development and production stacks.
 - Caddy reverse proxy, backup/restore scripts, metrics, and CI.
 - OpenTelemetry traces across API, worker, database, Redis, model, and Qdrant operations.
+- Command-based OCR fallback for scanned PDFs, including Tesseract-compatible configuration.
+- Team workspaces with roles, document sharing, shared-document search/Q&A, and source preview.
+- Team-bound API key policies with scope/daily-limit caps and CSV audit exports.
 
 ## Next Improvements
 
-- Full OCR pipeline with Tesseract or a managed OCR provider.
-- Team workspaces with roles and document sharing.
-- Team-level API key policies and audit exports.
+- Managed OCR provider adapters such as AWS Textract, Azure Document Intelligence, or Google Document AI.
+- Email-based team invitations and SSO/SAML for enterprise deployments.
+- Fine-grained write permissions for collaborative annotations on shared documents.
